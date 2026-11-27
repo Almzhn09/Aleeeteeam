@@ -30,14 +30,15 @@ const isModel = (group: MarketStats) => group.comparableGroup.split(':')[1].incl
 
 function count(page: ListingPage | null) {
   if (!page) return '—'
+  if (page.total != null) return marketNumber.format(page.total)
   return page.nextOffset === null ? marketNumber.format(page.items.length) : `${page.items.length}+`
 }
 
 export function MarketHome() {
   const navigate = useNavigate()
   const all = useApiQuery<ListingPage>(`${apiPath}/listings?view=all&limit=1`)
-  const deals = useApiQuery<ListingPage>(`${apiPath}/listings?view=deals&limit=100`)
-  const risk = useApiQuery<ListingPage>(`${apiPath}/listings?view=risk&limit=100`)
+  const deals = useApiQuery<ListingPage>(`${apiPath}/listings?view=deals&limit=4`)
+  const risk = useApiQuery<ListingPage>(`${apiPath}/listings?view=risk&limit=1`)
   const stats = useApiQuery<StatsPage>(`${apiPath}/stats`)
 
   const groups = [...(stats.data?.items ?? [])].sort((a, b) => b.sampleSize - a.sampleSize)
@@ -150,6 +151,7 @@ function PriceChart({ groups, loading, error, retry }: {
         <h2 id="price-chart">Распределение цен</h2>
         {group && <p className="ml-muted">{groupTitle(group)} · {group.sampleSize} объявл.</p>}
       </div>
+      <Link to="/radar" className="ml-more">Радар цен <ArrowRight size={15} /></Link>
       {groups.length > 1 && <div className="ml-pills" role="group" aria-label="Группа сравнения">
         {groups.slice(0, 4).map((item, index) => <button key={item.comparableGroup + item.currency}
           type="button" aria-pressed={index === selected} onClick={() => setSelected(index)}>

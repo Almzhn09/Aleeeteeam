@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { EmptyState, ErrorState, LoadingState, PageHeading } from '@/components/WorkspaceUI'
+import { EmptyState, ErrorState, LoadingState, PageHeading, SourceLink } from '@/components/WorkspaceUI'
 import { Button } from '@/components/ui/button'
 import type { ListingItem } from '@/lib/marketlens'
 import { useApiQuery } from '@/lib/useApiQuery'
@@ -67,6 +67,7 @@ function ComparisonCard({ id }: { id: string }) {
       <h2 className="break-words"><Link to={href}>{item.listing.title}</Link></h2>
       <p className="text-xl font-bold">{formatPrice(item.listing.price, item.listing.currency)}</p>
       <PriceComparison item={item} />
+      <SourceLink url={item.listing.url} />
       {!!item.analysis?.riskReasons.length && <ul className="list-disc pl-5 text-sm">
         {item.analysis.riskReasons.map((reason, index) =>
           <li key={`${reason.code}-${index}`}>{reason.description}</li>)}

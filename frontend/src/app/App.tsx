@@ -10,6 +10,7 @@ import { ComparisonProvider, MarketComparison } from '@/features/marketlens/Mark
 import { MarketLogo, MarketShell } from '@/features/marketlens/MarketShell'
 
 const MarketHome = lazy(() => import('@/features/marketlens/MarketHome').then(module => ({ default: module.MarketHome })))
+const MarketRadar = lazy(() => import('@/features/marketlens/MarketRadar').then(module => ({ default: module.MarketRadar })))
 const MarketCatalog = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketCatalog })))
 const MarketListing = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketListing })))
 
@@ -79,6 +80,7 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
       <Route path="/deals" element={<MarketCatalog key="deals" view="deals" />} />
       <Route path="/risk" element={<MarketCatalog key="risk" view="risk" />} />
       <Route path="/listings/:id" element={<MarketListing key={pathname} />} />
+      <Route path="/radar" element={<MarketRadar />} />
       <Route path="/compare" element={<MarketComparison />} />
       <Route path="*" element={<EmptyState title="Страница не найдена"><Link to="/">Вернуться на главную</Link></EmptyState>} />
     </Routes></Suspense></RouteBoundary>

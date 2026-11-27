@@ -210,3 +210,34 @@ it('compares up to three listings, keeps selection across routes and allows remo
   expect(screen.queryByRole('link', { name: 'Объявление 1' })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Сравнение (2)' })).toBeVisible()
 })
+
+it('shows model prices on the radar and positions the chosen budget', async () => {
+  const group = {
+    dataset: 'real', computedAt: '2026-11-27T10:00:00Z', category: 'electronics',
+    comparableGroup: 'electronics/phones:apple-iphone-13:any:KZT', currency: 'KZT',
+    sampleSize: 12, meanPrice: 140000, medianPrice: 135000, minPrice: 100000, maxPrice: 200000,
+    histogram: [{ min: 100000, max: 150000, count: 8 }, { min: 150000, max: 200000, count: 4 }],
+  }
+  const api = vi.fn().mockResolvedValue({ items: [group], truncated: false })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(), signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/radar']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+  expect(await screen.findByRole('combobox', { name: 'Модель' })).toHaveValue(group.comparableGroup)
+  expect(screen.getByText(/135\s000 ₸/)).toBeVisible()
+  expect(screen.getByText('12 объявл.')).toBeVisible()
+  fireEvent.change(screen.getByLabelText('Бюджет, ₸'), { target: { value: '90000' } })
+  expect(screen.getByRole('status')).toHaveTextContent('ниже минимальной цены')
+  expect(screen.getByRole('figure', { name: 'Распределение цен' })).toBeVisible()
+})
+
+it('does not substitute category averages when the radar has no model sample', async () => {
+  const api = vi.fn().mockResolvedValue({
+    items: [{ comparableGroup: 'electronics/phones:all:any:KZT', currency: 'KZT' }],
+    truncated: false,
+  })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(), signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/radar']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+  expect(await screen.findByText('Недостаточно сопоставимых объявлений')).toBeVisible()
+  expect(screen.queryByLabelText('Бюджет, ₸')).not.toBeInTheDocument()
+})
