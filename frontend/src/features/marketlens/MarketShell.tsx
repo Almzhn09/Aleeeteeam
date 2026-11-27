@@ -5,10 +5,9 @@ import { useComparison } from './MarketComparison'
 import './marketlens.css'
 
 const links = [
-  { to: '/', label: 'Главная' },
+  { to: '/', label: 'Обзор рынка' },
   { to: '/listings', label: 'Каталог' },
-  { to: '/deals', label: 'Выгодные' },
-  { to: '/risk', label: 'Проверка' },
+  { to: '/radar', label: 'Радар цен' },
   { to: '/compare', label: 'Сравнение' },
 ]
 

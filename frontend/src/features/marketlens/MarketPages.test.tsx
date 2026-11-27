@@ -210,3 +210,29 @@ it('compares up to three listings, keeps selection across routes and allows remo
   expect(screen.queryByRole('link', { name: 'Объявление 1' })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Сравнение (2)' })).toBeVisible()
 })
+
+it('uses observed prices to update the radar budget and available offers', async () => {
+  const key = 'electronics/phones:apple-iphone-13:128gb:any:KZT'
+  const api = vi.fn().mockResolvedValue({
+    groups: [{ key, sampleSize: 2 }],
+    sample: {
+      key, prices: [85000, 100000], medianPrice: null,
+      histogram: [{ min: 85000, max: 100000, count: 2 }],
+      offers: [row],
+    },
+    scanLimited: false,
+  })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(),
+    signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/radar']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+
+  expect(await screen.findByText('В бюджете 1 из 2')).toBeVisible()
+  expect(screen.getByText('Пока мало сопоставимых объявлений для рыночного ориентира.')).toBeVisible()
+  expect(screen.getByRole('link', { name: row.listing.title })).toBeVisible()
+  fireEvent.change(screen.getByLabelText('Бюджет, ₸'), { target: { value: '70000' } })
+  expect(screen.getByText('В бюджете 0 из 2')).toBeVisible()
+  expect(screen.queryByRole('link', { name: row.listing.title })).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Бюджет, ₸'), { target: { value: '100000' } })
+  expect(screen.getByText('В бюджете 2 из 2')).toBeVisible()
+})

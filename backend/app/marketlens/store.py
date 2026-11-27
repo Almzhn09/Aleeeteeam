@@ -13,7 +13,7 @@ from app.marketlens.contracts import (
     PriceObservation,
 )
 
-SCAN_LIMIT = 1000
+SCAN_LIMIT = 2000
 STATS_LIMIT = 100
 
 

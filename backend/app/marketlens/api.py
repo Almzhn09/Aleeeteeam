@@ -16,7 +16,8 @@ from app.marketlens.contracts import (
     StatsPage,
 )
 from app.marketlens.explanation import ExplanationResponse, explain
-from app.marketlens.store import MarketStore
+from app.marketlens.radar import RadarPage, radar
+from app.marketlens.store import SCAN_LIMIT, MarketStore
 
 router = APIRouter(prefix="/api/v1/market", tags=["MarketLens"])
 ListingId = Annotated[str, Path(pattern=r"^(olx|krisha|kolesa):[A-Za-z0-9_.-]{1,128}$")]
@@ -72,7 +73,7 @@ def catalog(
     view: Literal["all", "deals", "risk"] = "all",
     sort: Literal["default", "newest", "price_asc", "price_desc"] = "default",
     limit: Annotated[int, Query(ge=1, le=100)] = 24,
-    offset: Annotated[int, Query(ge=0, le=1000)] = 0,
+    offset: Annotated[int, Query(ge=0, le=SCAN_LIMIT)] = 0,
 ) -> ListingPage:
     if min_price is not None and max_price is not None and min_price > max_price:
         raise AppError(422, "INVALID_PRICE_RANGE", "Minimum price exceeds maximum price")
@@ -157,6 +158,19 @@ def history(
         if store.get_listing(listing_id) is None:
             raise NotFound()
         return store.price_history(listing_id, limit)
+    except GoogleAPIError:
+        raise IntegrationUnavailable("MarketLens Firestore") from None
+
+
+@router.get("/radar", response_model=RadarPage)
+def price_radar(
+    user: CurrentUser,
+    store: Store,
+    city: Annotated[str, Query(max_length=120)] = "",
+    group: Annotated[str, Query(max_length=300)] = "",
+) -> RadarPage:
+    try:
+        return radar(store, city=city, group=group)
     except GoogleAPIError:
         raise IntegrationUnavailable("MarketLens Firestore") from None
 

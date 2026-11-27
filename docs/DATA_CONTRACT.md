@@ -89,5 +89,14 @@ scrapedAt, price и currency. По умолчанию 20 последних сн
 Параметр limit принимает значения от 1 до 100. GET /stats возвращает
 {items, truncated}. POST /listings/{id}/explanation возвращает
 {provider, summary, insights, recommendations, limitations}. provider —
-local, gemini или openai. В MVP поиск/фильтры работают по первым 1000 реальных записям
+local, gemini или openai. В MVP поиск/фильтры работают по первым 2000 реальных записям
 в порядке document ID. При превышении лимита интерфейс сообщает об ограничении.
+
+
+GET /radar принимает необязательные city и group. Возвращает
+{groups, sample, scanLimited}. Группы содержат key и sampleSize. Первая группа
+по умолчанию имеет самую большую выборку. Sample содержит key, prices,
+histogram, medianPrice и offers (до 24 карточек в порядке цены). В выборку
+входят известные положительные цены в KZT для одной модели или варианта.
+При менее чем пяти ценах medianPrice равна null. Гистограмма и список
+известных цен доступны при любом размере выборки.

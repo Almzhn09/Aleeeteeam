@@ -372,3 +372,46 @@ def test_openai_explanation_is_grounded_and_preserves_local_fallback():
         item, settings, reserve=lambda: False, transport=httpx.MockTransport(unexpected)
     )
     assert result.provider == "local"
+
+
+def test_radar_filters_city_and_reports_thin_groups_and_real_price_samples():
+    store = Store()
+    store.rows = [
+        listing(str(index), title="iPhone 13 128 GB", subcategory="phones", price=10000 * index)
+        for index in range(1, 6)
+    ] + [
+        listing("11", title="iPhone 13 128 GB", subcategory="phones", city="Астана", price=100),
+        listing("12", title="Чехол iPhone 13 128 GB", subcategory="phones", price=200),
+        listing("13", title="iPhone 14 128 GB", subcategory="phones", price=35000),
+    ]
+    app = create_marketlens_app(MarketLensSettings(_env_file=None))
+    app.dependency_overrides[get_runtime] = Identity
+    app.dependency_overrides[market_store] = lambda: store
+    with TestClient(app) as client:
+        url = "/api/v1/market/radar"
+        assert client.get(url).status_code == 401
+        result = client.get(url, params={"city": "алматы"}, headers=HEADERS).json()
+        assert [group["sampleSize"] for group in result["groups"]] == [5, 1]
+        assert result["sample"]["prices"] == [10000, 20000, 30000, 40000, 50000]
+        assert result["sample"]["medianPrice"] == 30000
+        assert sum(bin_["count"] for bin_ in result["sample"]["histogram"]) == 5
+        thin = client.get(
+            url, params={"city": "Алматы", "group": result["groups"][1]["key"]}, headers=HEADERS
+        ).json()
+        assert thin["sample"]["prices"] == [35000]
+        assert thin["sample"]["medianPrice"] is None
+
+
+def test_catalog_offset_above_the_previous_limit():
+    store = Store()
+    store.rows = [listing(str(index)) for index in range(1010)]
+    app = create_marketlens_app(MarketLensSettings(_env_file=None))
+    app.dependency_overrides[get_runtime] = Identity
+    app.dependency_overrides[market_store] = lambda: store
+    with TestClient(app) as client:
+        page = client.get(
+            "/api/v1/market/listings", params={"offset": 1008, "limit": 1}, headers=HEADERS
+        )
+    assert page.status_code == 200
+    assert page.json()["items"][0]["listing"]["id"] == "olx:1008"
+    assert page.json()["nextOffset"] == 1009

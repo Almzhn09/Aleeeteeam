@@ -151,3 +151,31 @@ def test_dashboard_stats_publish_as_one_generation(db):
     assert store.get_stats() == ([current], False)
     assert store.publish_stats([], updated_at + timedelta(days=1)) == 0
     assert store.get_stats() == ([], False)
+
+
+def test_catalog_scan_includes_listings_past_the_previous_thousand_record_cap(db):
+    store = MarketStore(db)
+    raw = Listing(
+        id="olx:test-0000",
+        external_id="test-0000",
+        source="olx",
+        dataset="real",
+        url="https://www.olx.kz/example",
+        title="Объявление для проверки каталога",
+        category="electronics",
+        scraped_at=datetime(2026, 11, 27, tzinfo=UTC),
+    ).model_dump(mode="json", by_alias=True)
+
+    for start, stop in ((0, 400), (400, 800), (800, 1001)):
+        batch = db.batch()
+        for index in range(start, stop):
+            external_id = f"test-{index:04d}"
+            listing_id = f"olx:{external_id}"
+            document = raw | {"id": listing_id, "externalId": external_id}
+            batch.set(db.collection("listings").document(listing_id), document)
+        batch.commit()
+
+    rows, limited = store.scan_listings()
+    assert len(rows) == 1001
+    assert rows[-1].id == "olx:test-1000"
+    assert not limited
