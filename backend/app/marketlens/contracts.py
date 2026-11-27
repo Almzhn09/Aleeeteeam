@@ -143,6 +143,8 @@ class ListingPage(MarketModel):
     scan_limited: bool
     total: int = Field(ge=0)
     subcategory_counts: dict[str, int] = Field(default_factory=dict)
+    subcategory_covers: dict[str, str] = Field(default_factory=dict)
+    latest_scraped_at: AwareDatetime | None = None
 
 
 class StatsPage(MarketModel):

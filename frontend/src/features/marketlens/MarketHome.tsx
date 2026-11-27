@@ -1,13 +1,15 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  ArrowRight, BarChart3, Coins, Layers, Percent, Search, ShieldAlert, ShieldCheck, Smartphone, Tag,
+  Activity, ArrowRight, BarChart3, Coins, Layers, Percent, Radar, Search, ShieldAlert, ShieldCheck, Smartphone, Tag,
 } from 'lucide-react'
 import { ErrorState, LoadingState } from '@/components/WorkspaceUI'
 import { useApiQuery } from '@/lib/useApiQuery'
 import type { ListingItem, ListingPage, MarketStats, StatsPage } from '@/lib/marketlens'
-import { formatPrice, marketCategories, marketNumber } from './dashboard/format'
+import { formatPrice, marketCategories, marketNumber, marketTime } from './dashboard/format'
 
+const city = 'Усть-Каменогорск'
+const cityParam = new URLSearchParams({ city }).toString()
 const apiPath = '/api/v1/market'
 const compact = new Intl.NumberFormat('ru-KZ', { notation: 'compact', maximumFractionDigits: 1 })
 const words: Record<string, string> = {
@@ -36,14 +38,17 @@ function count(page: ListingPage | null) {
 
 export function MarketHome() {
   const navigate = useNavigate()
-  const all = useApiQuery<ListingPage>(`${apiPath}/listings?view=all&limit=1`)
-  const deals = useApiQuery<ListingPage>(`${apiPath}/listings?view=deals&limit=4`)
-  const risk = useApiQuery<ListingPage>(`${apiPath}/listings?view=risk&limit=1`)
+  const all = useApiQuery<ListingPage>(`${apiPath}/listings?view=all&limit=1&${cityParam}`)
+  const deals = useApiQuery<ListingPage>(`${apiPath}/listings?view=deals&limit=4&${cityParam}`)
+  const risk = useApiQuery<ListingPage>(`${apiPath}/listings?view=risk&limit=1&${cityParam}`)
   const stats = useApiQuery<StatsPage>(`${apiPath}/stats`)
 
   const groups = [...(stats.data?.items ?? [])].sort((a, b) => b.sampleSize - a.sampleSize)
   const models = groups.filter(isModel)
   const featured = models[0] ?? groups[0]
+  const categories = Object.entries(all.data?.subcategoryCounts ?? {})
+    .sort(([nameA, totalA], [nameB, totalB]) => totalB - totalA || nameA.localeCompare(nameB))
+  const latest = all.data?.latestScrapedAt
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -64,6 +69,11 @@ export function MarketHome() {
             placeholder="Найти товар, например: iPhone 13" />
           <button type="submit">Найти</button>
         </form>
+        <nav className="ml-quick" aria-label="Быстрые переходы">
+          <Link to="/radar"><Radar size={16} aria-hidden="true" /> Радар цен</Link>
+          <Link to="/deals"><Tag size={16} aria-hidden="true" /> Выгодные</Link>
+          <Link to="/risk"><ShieldAlert size={16} aria-hidden="true" /> Требуют проверки</Link>
+        </nav>
       </div>
       <HeroArt />
       <ul className="ml-features">
@@ -73,9 +83,11 @@ export function MarketHome() {
       </ul>
     </section>
 
+    <h2 className="ml-section-title"><Activity size={20} aria-hidden="true" /> Пульс города · {city}</h2>
+    {latest && <p className="ml-muted mb-3">Последний сбор: {marketTime.format(new Date(latest))}</p>}
     <section className="ml-kpis" aria-label="Ключевые показатели">
-      <Kpi icon={<Layers size={22} />} tone="green" value={all.data ? marketNumber.format(all.data.scannedCount) + (all.data.scanLimited ? '+' : '') : '—'}
-        label="Объявлений в базе" note="OLX" />
+      <Kpi icon={<Layers size={22} />} tone="green" value={all.data ? marketNumber.format(all.data.total ?? all.data.scannedCount) + (all.data.scanLimited ? '+' : '') : '—'}
+        label="Объявлений в городе" note="OLX" />
       <Kpi icon={<Tag size={22} />} tone="green" value={count(deals.data)} label="Выгодных предложений"
         note={<Link to="/deals">Смотреть</Link>} />
       <Kpi icon={<ShieldAlert size={22} />} tone="red" value={count(risk.data)} label="Требуют проверки"
@@ -83,8 +95,19 @@ export function MarketHome() {
       <Kpi icon={<Coins size={22} />} tone="amber"
         value={featured ? formatPrice(featured.medianPrice, featured.currency) : '—'}
         label={featured ? `Медиана (${groupTitle(featured)})` : 'Медианная цена'}
-        note={featured ? `${featured.sampleSize} объявл.` : undefined} />
+        note={featured ? `${featured.sampleSize} объявл. · весь каталог` : undefined} />
     </section>
+
+    {categories.length > 0 && <section className="ml-categories-wrap" aria-labelledby="categories">
+      <div className="ml-card-head">
+        <h2 id="categories" className="ml-section-title">Категории</h2>
+        <Link to="/listings" className="ml-more">Весь каталог <ArrowRight size={15} /></Link>
+      </div>
+      <ul className="ml-categories">
+        {categories.map(([slug, total]) => <CategoryTile key={slug} slug={slug} total={total}
+          cover={all.data?.subcategoryCovers?.[slug]} />)}
+      </ul>
+    </section>}
 
     <div className="ml-columns">
       <PriceChart groups={models.length ? models : groups} loading={stats.loading} error={stats.error}
@@ -104,6 +127,21 @@ export function MarketHome() {
       </section>
     </div>
   </div>
+}
+
+function CategoryTile({ slug, total, cover }: { slug: string; total: number; cover?: string }) {
+  const [broken, setBroken] = useState<string>()
+  const image = cover?.startsWith('https://') && cover !== broken ? cover : undefined
+  const title = marketCategories[slug] ?? slug.charAt(0).toUpperCase() + slug.slice(1)
+  return <li>
+    <Link to={`/listings?${new URLSearchParams({ city, subcategory: slug })}`} className="ml-category">
+      <span className="ml-category-photo">{image
+        ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(image)} />
+        : <Layers size={28} aria-hidden="true" />}</span>
+      <strong>{title}</strong>
+      <span className="ml-muted">{marketNumber.format(total)} объявл.</span>
+    </Link>
+  </li>
 }
 
 function Kpi({ icon, tone, value, label, note }: {

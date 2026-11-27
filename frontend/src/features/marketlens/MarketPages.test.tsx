@@ -151,7 +151,12 @@ it('shows live counts, top deals and price distribution on the home page', async
     },
   }
   const api = vi.fn().mockImplementation(async (path: string) => {
-    if (path.includes('view=all')) return { items: [row], nextOffset: 1, scanLimited: false, scannedCount: 30 }
+    if (path.includes('view=all')) return {
+      items: [row], nextOffset: 1, scanLimited: false, total: 30, scannedCount: 806,
+      subcategoryCounts: { tablets: 20, laptops: 10 },
+      subcategoryCovers: { tablets: row.listing.images[0] },
+      latestScrapedAt: row.listing.scrapedAt,
+    }
     if (path.includes('view=deals')) return { items: [deal], nextOffset: null, scanLimited: false, scannedCount: 30 }
     if (path.includes('view=risk')) return { items: [], nextOffset: null, scanLimited: false, scannedCount: 30 }
     if (path.endsWith('/stats')) return {
@@ -172,6 +177,13 @@ it('shows live counts, top deals and price distribution on the home page', async
   const kpis = screen.getByRole('region', { name: 'Ключевые показатели' })
   expect(await within(kpis).findByText('30')).toBeVisible()
   expect(within(kpis).getByText('Медиана (iPhone 13)')).toBeVisible()
+  const tabletTile = screen.getByRole('link', { name: /Планшеты 20/ })
+  const tileUrl = new URL(tabletTile.getAttribute('href') ?? '', 'https://test.invalid')
+  expect(tileUrl.searchParams.get('city')).toBe('Усть-Каменогорск')
+  expect(tileUrl.searchParams.get('subcategory')).toBe('tablets')
+  expect(tabletTile.querySelector('img')).toHaveAttribute('src', row.listing.images[0])
+  expect(screen.getByText(/Последний сбор/)).toBeVisible()
+  expect(api.mock.calls.filter(([path]) => String(path).includes('view=all'))).toHaveLength(1)
   expect(await screen.findByRole('link', { name: /iPhone 13 128GB/ })).toHaveAttribute('href', '/listings/olx%3Adeal')
   expect(screen.getByText('-16% от рынка')).toBeVisible()
   expect(screen.getByText('iPhone 13 · 7 объявл.')).toBeVisible()

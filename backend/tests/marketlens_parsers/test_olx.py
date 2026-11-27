@@ -113,7 +113,7 @@ def test_collect_requires_authorization_and_supported_category():
 
     with httpx.Client(transport=httpx.MockTransport(unexpected_request)) as client:
         parser = OLXParser(client)
-        with pytest.raises(ValueError, match="electronics"):
+        with pytest.raises(ValueError, match="неизвестная категория"):
             parser.collect(CollectionRequest(category="cars"))
         with pytest.raises(OLXSourceError, match="разрешение"):
             parser.collect(CollectionRequest(category=CATEGORY))

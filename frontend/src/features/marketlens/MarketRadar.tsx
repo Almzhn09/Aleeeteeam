@@ -83,27 +83,26 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
     : Math.max(0, Math.min(100, (budget - lowest) / (highest - lowest || 1) * 100))
 
   return <div className="my-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-    <section className="panel content-pad min-w-0 space-y-5" aria-label="Распределение цен">
+    <section className="ml-card ml-radar space-y-5" aria-label="Распределение цен">
       <div>
         <h2>Распределение цен</h2>
         <p className="text-sm text-muted-foreground">{prices.length} предложений с ценой в тенге</p>
       </div>
-      <div className="relative">
-        <ol className="flex h-32 items-end gap-1 border-b pb-1" aria-label="Количество объявлений по диапазонам">
+      <div className="ml-radar-chart">
+        <ol className="ml-bars" aria-label="Количество объявлений по диапазонам">
           {histogram.map((bin, index) => {
             const caption = `${formatPrice(bin.min, 'KZT')} – ${formatPrice(bin.max, 'KZT')}: ${bin.count}`
             return <li key={index} title={caption}
-              className="flex h-full min-w-0 flex-1 items-end justify-center">
+              className={budget !== null && bin.max <= budget ? 'fits' : undefined}>
+              <span className="ml-bar-count">{bin.count}</span>
               <span className="sr-only">{caption}</span>
-              <span aria-hidden="true" className={`w-full rounded-t-md ${budget !== null && bin.min <= budget
-                ? 'bg-primary' : 'bg-muted'} motion-safe:transition-colors`}
+              <span aria-hidden="true" className="ml-bar"
                 style={{ height: `${Math.max(3, bin.count / maxCount * 100)}%` }} />
             </li>
           })}
         </ol>
         {marker !== null && <span aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 border-r-2 border-amber-500 motion-safe:transition-[left]"
-          style={{ left: `${marker}%` }} />}
+          className="ml-budget-marker" style={{ left: `${marker}%` }} />}
       </div>
       <p className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
         <span>{formatPrice(lowest, 'KZT')}</span><span>{formatPrice(highest, 'KZT')}</span>
@@ -122,7 +121,7 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
         : `Медиана цен объявлений: ${formatPrice(sample.medianPrice, 'KZT')}`}</p>
     </section>
 
-    <section className="panel content-pad min-w-0 space-y-4" aria-label="Предложения в бюджете">
+    <section className="ml-card space-y-4" aria-label="Предложения в бюджете">
       <h2>Предложения в бюджете</h2>
       {!visible.length && <p className="text-sm text-muted-foreground">Нет предложений в пределах бюджета.</p>}
       <ul className="divide-y">

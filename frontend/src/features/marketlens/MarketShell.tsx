@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { LogOut, TrendingUp } from 'lucide-react'
 import { useComparison } from './MarketComparison'
 import './marketlens.css'
@@ -10,6 +10,8 @@ const links = [
   { to: '/radar', label: 'Радар цен' },
   { to: '/compare', label: 'Сравнение' },
 ]
+// Подборки /deals и /risk остаются рабочими URL и подсвечивают «Каталог».
+const catalogPaths = ['/listings', '/deals', '/risk']
 
 export function MarketShell({ userName, onLogout, onSkip, children }: {
   userName: string
@@ -18,6 +20,8 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
   children: ReactNode
 }) {
   const { ids } = useComparison()
+  const { pathname } = useLocation()
+  const inCatalog = catalogPaths.some(path => pathname === path || pathname.startsWith('/listings/'))
   return <div className="ml-shell">
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); onSkip() }}>К содержимому</a>
     <header className="ml-header">
@@ -25,7 +29,11 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
         <MarketLogo />
         <nav aria-label="Основная навигация" className="ml-nav">
           {links.map(({ to, label }) => <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `ml-nav-link${isActive ? ' active' : ''}`}>{label}{to === '/compare' && ids.length > 0 && ` (${ids.length})`}</NavLink>)}
+            className={({ isActive }) => `ml-nav-link${isActive || (to === '/listings' && inCatalog) ? ' active' : ''}`}>
+            {label}{to === '/compare' && ids.length > 0 && <>{' '}<span className="ml-count" key={ids.length}>
+              <span className="ml-visually-hidden">(</span>{ids.length}<span className="ml-visually-hidden">)</span>
+            </span></>}
+          </NavLink>)}
         </nav>
         <div className="ml-user">
           <span className="ml-user-name">{userName}</span>

@@ -79,6 +79,8 @@ def catalog(
         scanned_count = 0
         listings = []
         counts: dict[str, int] = {}
+        covers: dict[str, str] = {}
+        latest = None
         selected_subcategory = subcategory.strip().casefold()
         filters = dict(
             q=q.strip().casefold(),
@@ -95,6 +97,10 @@ def catalog(
             category_key = (listing.subcategory or "").casefold()
             if category_key:
                 counts[category_key] = counts.get(category_key, 0) + 1
+                if listing.images:
+                    covers.setdefault(category_key, str(listing.images[0]))
+            if latest is None or listing.scraped_at > latest:
+                latest = listing.scraped_at
             if not selected_subcategory or category_key == selected_subcategory:
                 listings.append(listing)
         if sort == "newest":
@@ -135,6 +141,8 @@ def catalog(
         scan_limited=False,
         total=total,
         subcategory_counts=counts,
+        subcategory_covers=covers,
+        latest_scraped_at=latest,
     )
 
 

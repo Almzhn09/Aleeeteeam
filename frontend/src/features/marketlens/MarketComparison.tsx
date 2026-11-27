@@ -56,7 +56,7 @@ function ComparisonCard({ id }: { id: string }) {
   const query = useApiQuery<ListingItem>('/api/v1/market' + href)
   const item = query.data
   const image = item?.listing.images.find(url => url.startsWith('https://'))
-  return <article className="panel content-pad min-w-0 space-y-4">
+  return <article className="panel content-pad min-w-0 space-y-4 ml-compare-card">
     {query.loading && <LoadingState />}
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
     {item && <>

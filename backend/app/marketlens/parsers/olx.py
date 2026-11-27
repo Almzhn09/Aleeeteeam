@@ -15,9 +15,37 @@ from app.marketlens.contracts import CollectionRequest, Listing, Source
 
 CATEGORY = "electronics"
 CATEGORY_URL = "https://www.olx.kz/elektronika/telefony-i-aksesuary/mobilnye-telefony-smartfony/"
+# Public OLX category paths. Keep the internal slugs stable across imports.
+OLX_SECTION_PATHS = {
+    "phones": "elektronika/telefony-i-aksesuary/mobilnye-telefony-smartfony",
+    "laptops": "elektronika/noutbuki-i-aksesuary/noutbuki",
+    "tablets": "elektronika/planshety-el-knigi-i-aksessuary/planshetnye-kompyutery",
+    "game-consoles": "elektronika/igry-i-igrovye-pristavki/pristavki",
+    "televisions": "elektronika/tv-videotehnika/televizory",
+    "monitors": "elektronika/kompyutery-i-komplektuyuschie/monitory",
+    "cameras": "elektronika/foto-video/tsifrovye-fotoapparaty",
+    "audio": "elektronika/audiotehnika/akusticheskie-sistemy",
+    "refrigerators": "elektronika/tehnika-dlya-kuhni/holodilniki",
+    "washing-machines": "elektronika/tehnika-dlya-doma/stiralnye-mashiny",
+    "vacuums": "elektronika/tehnika-dlya-doma/pylesosy",
+    "microwaves": "elektronika/tehnika-dlya-kuhni/mikrovolnovye-pechi",
+    "coffee-equipment": "elektronika/tehnika-dlya-kuhni/kofevarki-kofemolki",
+    "soft-furniture": "dom-i-sad/mebel/mebel-dlya-gostinoy/myagkaya-mebel",
+    "desks": "dom-i-sad/mebel/ofisnaya-mebel/stoly",
+    "bicycles": "hobbi-otdyh-i-sport/sport-otdyh/velo/velosipedy",
+    "headphones": "elektronika/audiotehnika/naushniki",
+    "fitness-machines": "hobbi-otdyh-i-sport/sport-otdyh/atletika-fitnes/trenazhery",
+    "musical-instruments": "hobbi-otdyh-i-sport/muzykalnye-instrumenty",
+    "power-tools": "stroitelstvo-remont/instrumenty-oborudovanie/elektroinstrumenty",
+}
 OLX_SECTIONS = {
-    "phones": CATEGORY_URL,
-    "laptops": "https://www.olx.kz/elektronika/noutbuki-i-aksesuary/noutbuki/",
+    section: f"https://www.olx.kz/{path}/" for section, path in OLX_SECTION_PATHS.items()
+}
+CATEGORY_BY_ROOT = {
+    "elektronika": CATEGORY,
+    "dom-i-sad": "home",
+    "hobbi-otdyh-i-sport": "hobby",
+    "stroitelstvo-remont": "tools",
 }
 
 CITY_LABELS = {"ust-kamenogorsk": "Усть-Каменогорск"}
@@ -240,7 +268,7 @@ def _normalize(
             dataset="real",
             url=url,
             title=title,
-            category=CATEGORY,
+            category=CATEGORY_BY_ROOT[OLX_SECTION_PATHS[subcategory].split("/", 1)[0]],
             subcategory=subcategory,
             price=price,
             currency="KZT" if price is not None else None,
@@ -264,7 +292,7 @@ class OLXParser:
     def collect(self, request: CollectionRequest) -> list[Listing]:
         section = "phones" if request.category == CATEGORY else request.category
         if section not in OLX_SECTIONS:
-            raise ValueError("OLX: поддерживаются electronics/phones и electronics/laptops")
+            raise ValueError("OLX: неизвестная категория сбора")
         if not self._authorized:
             raise OLXSourceError("OLX: требуется подтверждённое разрешение на сбор категории")
         url = OLX_SECTIONS[section]
