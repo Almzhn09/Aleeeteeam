@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from app.marketlens.analytics.engine import analyze
+from app.marketlens.analytics.engine import analyze, models_needing_samples
 
 
 def analyze_store(store, computed_at: datetime | None = None) -> dict:
@@ -15,4 +15,5 @@ def analyze_store(store, computed_at: datetime | None = None) -> dict:
         "scanLimited": scan_limited,
         "savedResults": sum(store.save_analysis(result) for result in analysis.results),
         "savedStats": store.publish_stats(analysis.stats, when),
+        "modelsNeedingSamples": models_needing_samples(listings),
     }

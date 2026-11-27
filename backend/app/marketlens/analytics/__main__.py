@@ -12,6 +12,7 @@ from pathlib import Path
 from pydantic import TypeAdapter, ValidationError
 
 from app.marketlens.analytics import analyze
+from app.marketlens.analytics.engine import models_needing_samples
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats
 
 
@@ -50,6 +51,7 @@ def main():
         "deals": sum(r.is_deal for r in results),
         "riskMediumOrHigh": sum(r.risk_level in {"medium", "high"} for r in results),
         "groups": len(analysis.stats),
+        "modelsNeedingSamples": models_needing_samples(listings),
     }
     print(json.dumps(summary), file=sys.stderr)
 

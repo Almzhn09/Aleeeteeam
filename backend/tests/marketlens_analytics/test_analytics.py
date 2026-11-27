@@ -10,6 +10,7 @@ from pydantic import TypeAdapter
 
 from app.marketlens.analytics import ALGORITHM_VERSION, analyze, analyze_store, histogram, risk
 from app.marketlens.analytics.__main__ import main as analyze_cli
+from app.marketlens.analytics.engine import models_needing_samples
 from app.marketlens.analytics.grouping import group_keys, normalize_text, product_key
 from app.marketlens.analytics.laptops import laptop_key
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats
@@ -296,6 +297,7 @@ def test_cli_prints_both_result_kinds(tmp_path, monkeypatch, capsys):
         "deals": 0,
         "riskMediumOrHigh": 0,
         "groups": 3,
+        "modelsNeedingSamples": {},
     }
     assert len(output["results"]) == 6
     assert output["results"][0]["algorithmVersion"] == ALGORITHM_VERSION
@@ -326,7 +328,13 @@ def test_analyze_store_saves_results_and_stats_through_public_methods():
 
     store = FakeStore()
     summary = analyze_store(store, computed_at=COMPUTED)
-    assert summary == {"listings": 6, "scanLimited": False, "savedResults": 6, "savedStats": 3}
+    assert summary == {
+        "listings": 6,
+        "scanLimited": False,
+        "savedResults": 6,
+        "savedStats": 3,
+        "modelsNeedingSamples": {},
+    }
     assert all(item.dataset == "real" for item in store.stats)
     assert store.results[0].market_price == 330000
 
@@ -407,3 +415,17 @@ def test_accessories_from_model_search_do_not_move_market_or_get_flagged():
     assert [reason.code for reason in case.risk_reasons] == ["accessory_not_device"]
     stats = {item.comparable_group: item for item in analysis.stats}
     assert stats[GROUP_13].sample_size == 6 and stats[GROUP_13].min_price == 300000
+
+
+def test_models_needing_samples_lists_thin_real_models():
+    rows = iphone_market(dataset="real") + [
+        phone("a", "iPhone 15 Pro", 500000, dataset="real"),
+        phone("b", "iPhone 15 Pro 256gb", 520000, dataset="real"),
+        phone("c", "Redmi 13C", 60000, dataset="real"),
+        phone("d", "Чехол для iPhone 15 Pro", 3000, dataset="real"),
+        phone("e", "Redmi 13C", 60000),
+    ]
+    assert models_needing_samples(rows) == {
+        "electronics/phones:apple-iphone-15-pro:any:KZT": 2,
+        "electronics/phones:xiaomi-redmi13c:any:KZT": 1,
+    }

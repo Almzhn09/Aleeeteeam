@@ -198,3 +198,18 @@ def _stats(dataset, group, example: Listing, sample, computed_at) -> MarketStats
         max_price=max(prices),
         histogram=histogram(prices),
     )
+
+
+def models_needing_samples(listings: Iterable[Listing], top: int = 10) -> dict[str, int]:
+    """Models seen with too few priced listings to be valued, most frequent first.
+
+    Helps choose OLX `--query` searches that make valuations possible.
+    """
+    counts: dict[str, int] = defaultdict(int)
+    for row in latest_observations(listings):
+        if row.dataset == "real" and _market_eligible(row) and not risk.is_accessory(row):
+            if model := group_keys(row).get("model"):
+                counts[model] += 1
+    thin = [(model, count) for model, count in counts.items() if count <= MIN_PEERS]
+    thin.sort(key=lambda item: (-item[1], item[0]))
+    return dict(thin[:top])
