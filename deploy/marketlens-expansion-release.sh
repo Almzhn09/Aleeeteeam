@@ -3,16 +3,21 @@
 set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "Usage: bash deploy/marketlens-expansion-release.sh --code-only" >&2
+  echo "Usage: bash deploy/marketlens-expansion-release.sh --code-only [--refresh-analytics]" >&2
   echo "   or: bash deploy/marketlens-expansion-release.sh /path/to/listings.json [/path/to/photos.py]" >&2
   exit 2
 fi
 
 data=""
 photos=""
+refresh=false
 if [[ "$1" == --code-only ]]; then
-  [[ $# -eq 1 ]] || exit 2
+  if [[ $# -eq 2 ]]; then
+    [[ "$2" == --refresh-analytics ]] || exit 2
+    refresh=true
+  fi
 else
+  refresh=true
   data=$(realpath "$1")
   test -s "$data"
   if [[ $# -eq 2 ]]; then
@@ -45,7 +50,7 @@ export VITE_MARKETLENS_API_BASE_URL="$api"
 
 # Build all release inputs before changing the live API.
 (cd frontend && npm ci && npm run build:marketlens:hosting)
-if [[ -n "$data" ]]; then
+if [[ "$refresh" == true ]]; then
   venv_dir=$(mktemp -d)
   trap 'rm -rf "$venv_dir"' EXIT
   python3 -m venv "$venv_dir"
@@ -64,11 +69,12 @@ if [[ "$radar_status" != 401 ]]; then
   exit 1
 fi
 
-if [[ -n "$data" ]]; then
+if [[ "$refresh" == true ]]; then
   export MARKETLENS_FIREBASE_ENABLED=true
   (
     cd backend
     .venv/bin/python - "$data" <<'PY'
+import json
 import subprocess
 import sys
 from unittest.mock import patch
@@ -76,17 +82,31 @@ from unittest.mock import patch
 from google.oauth2.credentials import Credentials
 
 from app.marketlens.import_listings import main as import_listings
-from app.marketlens.refresh_analytics import main as refresh_analytics
+from app.marketlens.refresh_analytics import refresh_analytics
+from app.marketlens.runtime import marketlens_runtime
+from app.marketlens.settings import MarketLensSettings
+from app.marketlens.store import MarketStore
 
 path = sys.argv[1]
 token = subprocess.check_output(["gcloud", "auth", "print-access-token"], text=True).strip()
 credentials = Credentials(token=token, quota_project_id="hackos20")
 
 with patch("google.auth.default", return_value=(credentials, "hackos20")):
-    sys.argv = ["import_listings", path]
-    import_listings()
-    sys.argv = ["refresh_analytics"]
-    refresh_analytics()
+    if path:
+        sys.argv = ["import_listings", path]
+        import_listings()
+    runtime = marketlens_runtime(MarketLensSettings())
+    try:
+        summary = refresh_analytics(MarketStore(runtime.db()))
+    finally:
+        runtime.close()
+    if (
+        summary["scanLimited"]
+        or not summary["scannedCount"]
+        or summary["savedResults"] != summary["scannedCount"]
+    ):
+        raise SystemExit("Analytics refresh did not publish every catalog result; stop before Hosting.")
+    print(json.dumps(summary))
 PY
     if [[ -n "$photos" ]]; then
       .venv/bin/python "$photos" "$project"
