@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { EmptyState, FormField } from '@/components/WorkspaceUI'
 import type { MarketStats } from '@/lib/marketlens'
-import { formatPrice, marketNumber } from './format'
+import { formatPrice, marketNumber, marketTime } from './format'
 
 const categories: Record<string, string> = { electronics: 'Электроника' }
 
@@ -26,6 +26,9 @@ export function MarketDistribution({ groups }: { groups: MarketStats[] }) {
       <div>
         <h2 id="market-prices" className="text-lg font-semibold">Цены объявлений</h2>
         <p className="text-sm text-muted-foreground">Предложений в выборке: {marketNumber.format(group.sampleSize)}</p>
+        <p className="text-sm text-muted-foreground">
+          Рассчитано <time dateTime={group.computedAt}>{marketTime.format(new Date(group.computedAt))}</time>
+        </p>
       </div>
       <FormField label="Сопоставимая группа">
         <select value={groupKey(group)} onChange={event => setSelected(event.target.value)}>

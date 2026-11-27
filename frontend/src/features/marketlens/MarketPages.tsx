@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import {
   DetailLink, EmptyState, ErrorState, FormField, LoadingState, PageHeading, SourceLink,
@@ -67,6 +67,17 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
     const value = search.get(name)
     if (value) filters.set(name, value)
   }
+  const filterQuery = filters.toString()
+  const form = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    const saved = new URLSearchParams(filterQuery)
+    for (const name of filterNames) {
+      const input = form.current?.elements.namedItem(name)
+      if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
+        input.value = saved.get(name) ?? ''
+      }
+    }
+  }, [filterQuery])
   const rawOffset = search.get('offset') ?? ''
   const offset = /^\d+$/.test(rawOffset) && Number(rawOffset) <= 1000 ? Number(rawOffset) : 0
   const params = new URLSearchParams(filters)
@@ -76,10 +87,10 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const submitted = new FormData(event.currentTarget)
     const values = new URLSearchParams()
     for (const name of filterNames) {
-      const value = form.get(name)
+      const value = submitted.get(name)
       if (typeof value === 'string' && value.trim()) values.set(name, value.trim())
     }
     if (values.toString() === search.toString()) query.refresh()
@@ -97,7 +108,7 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
   return <>
     <PageHeading eyebrow="Рынок Казахстана" title={viewLabels[view]}
       description={view === 'risk' ? 'Признаки риска помогают выбрать, что проверить у продавца.' : 'Запрашиваемые цены и результаты сравнения предложений.'} />
-    <form key={filters.toString()} onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <form ref={form} onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <FormField label="Поиск"><input name="q" defaultValue={filters.get('q') ?? ''} maxLength={120} type="search" /></FormField>
       <FormField label="Категория"><input name="category" defaultValue={filters.get('category') ?? ''} maxLength={120} /></FormField>
       <FormField label="Город"><input name="city" defaultValue={filters.get('city') ?? ''} maxLength={120} /></FormField>

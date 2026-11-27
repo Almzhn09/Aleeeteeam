@@ -1,11 +1,7 @@
 import { ErrorState, LoadingState } from '@/components/WorkspaceUI'
 import type { PriceHistory } from '@/lib/marketlens'
 import { useApiQuery } from '@/lib/useApiQuery'
-import { formatPrice } from './format'
-
-const date = new Intl.DateTimeFormat('ru-KZ', {
-  dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Almaty',
-})
+import { formatPrice, marketTime } from './format'
 
 export function ListingHistory({ path }: { path: string }) {
   const { data, error, loading, refresh } = useApiQuery<PriceHistory>(`${path}/history`)
@@ -18,7 +14,7 @@ export function ListingHistory({ path }: { path: string }) {
     {data && (data.items.length === 0 ? <p>Снимков пока нет.</p> : <>
       <ol className="divide-y divide-border">
         {data.items.map(item => <li key={item.scrapedAt} className="flex flex-wrap justify-between gap-x-3 py-2">
-          <time dateTime={item.scrapedAt}>{date.format(new Date(item.scrapedAt))}</time>
+          <time dateTime={item.scrapedAt}>{marketTime.format(new Date(item.scrapedAt))}</time>
           <span className="font-medium tabular-nums">{formatPrice(item.price, item.currency)}</span>
         </li>)}
       </ol>

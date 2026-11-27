@@ -11,6 +11,10 @@ export function PriceComparison({ item }: { item: ListingItem }) {
       <div><dt className="text-muted-foreground">Цена объявления</dt><dd>{formatPrice(price, currency)}</dd></div>
       <div><dt className="text-muted-foreground">Оценка рынка</dt><dd>{formatPrice(analysis?.marketPrice ?? null, currency)}</dd></div>
       {analysis && <div><dt className="text-muted-foreground">Сопоставимых объявлений</dt><dd>{analysis.sampleSize}</dd></div>}
+      {analysis?.confidence != null && <div>
+        <dt className="text-muted-foreground">Доверие к оценке</dt>
+        <dd>{marketNumber.format(analysis.confidence * 100)}%</dd>
+      </div>}
       {analysis?.priceDeviationPercent != null && <div><dt className="text-muted-foreground">Отклонение цены</dt>
         <dd>{analysis.priceDeviationPercent > 0 ? '+' : ''}{marketNumber.format(analysis.priceDeviationPercent)}%</dd>
       </div>}
