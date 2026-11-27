@@ -168,3 +168,28 @@ def test_cli_source_failure_does_not_emit_listing_json(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "HTTP 403" in captured.err
+
+
+def test_ambiguous_original_is_skipped_without_spending_the_limit():
+    ambiguous = """<div data-cy="l-card">
+      <a href="/d/obyavlenie/test-IDTest1.html"><h4>Синтетическая карточка</h4></a>
+      <a href="/d/obyavlenie/test-IDTest2.html">Синтетическая ссылка</a>
+    </div>"""
+    valid = synthetic_card(
+        "/d/obyavlenie/test-IDTest3.html#details", "Фикстура с дробной ценой", "1 234,50 ₸"
+    )
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda request: html(ambiguous + valid))
+    ) as client:
+        [listing] = OLXParser(client, authorized=True).collect(
+            CollectionRequest(category=CATEGORY, limit=1)
+        )
+    assert listing.id == "olx:Test3"
+    assert listing.price == 1234.50
+    assert str(listing.url) == "https://www.olx.kz/d/obyavlenie/test-IDTest3.html"
+
+
+def test_non_html_response_is_a_source_failure():
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"error": "denied"}))
+    with httpx.Client(transport=transport) as client, pytest.raises(OLXSourceError, match="HTML"):
+        OLXParser(client, authorized=True).collect(CollectionRequest(category=CATEGORY))
