@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import TypeAdapter
 
-from app.marketlens.analytics import ALGORITHM_VERSION, analyze, analyze_store, histogram
+from app.marketlens.analytics import ALGORITHM_VERSION, analyze, analyze_store, histogram, risk
 from app.marketlens.analytics.__main__ import main as analyze_cli
 from app.marketlens.analytics.grouping import group_keys, normalize_text, product_key
 from app.marketlens.analytics.laptops import laptop_key
@@ -378,3 +378,32 @@ def test_laptops_are_valued_within_their_own_model():
     assert result.is_deal
     assert results["olx:fixture-legion"].market_price is None
     assert results["olx:fixture-i0"].comparable_group == GROUP_13
+
+
+@pytest.mark.parametrize(
+    ("title", "accessory"),
+    [
+        ("Чехол для iPhone 13", True),
+        ("Дисплей iPhone 13 оригинал", True),
+        ("Коробка от iPhone 13 Pro", True),
+        ("Зарядка для ноутбука Lenovo", True),
+        ("iPhone 13 муляж", True),
+        ("iPhone 13 + чехол и стекло в подарок", False),
+        ("Дисплей разбит, iPhone 13 работает", False),
+        ("iPhone 13 128gb", False),
+    ],
+)
+def test_accessories_are_recognized_by_title_start(title, accessory):
+    assert risk.is_accessory(phone("x", title, 5000)) is accessory
+
+
+def test_accessories_from_model_search_do_not_move_market_or_get_flagged():
+    cases = [phone(f"case{index}", "Чехол для iPhone 13", 3000) for index in range(4)]
+    analysis = analyze([*iphone_market(), *cases], computed_at=COMPUTED)
+    results = by_id(analysis)
+    assert results["olx:fixture-i0"].market_price == 330000
+    case = results["olx:fixture-case0"]
+    assert case.market_price is None and case.risk_level == "unknown"
+    assert [reason.code for reason in case.risk_reasons] == ["accessory_not_device"]
+    stats = {item.comparable_group: item for item in analysis.stats}
+    assert stats[GROUP_13].sample_size == 6 and stats[GROUP_13].min_price == 300000

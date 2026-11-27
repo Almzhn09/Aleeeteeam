@@ -94,7 +94,7 @@ def analyze(listings: Iterable[Listing], *, computed_at: datetime) -> MarketAnal
 def _evaluate(row, keys, samples, computed_at) -> AnalysisResult:
     text = risk.text_signals(row)
     group, peers, level = None, [], None
-    if row.price is not None and row.price > 0:
+    if row.price is not None and row.price > 0 and not risk.is_accessory(row):
         for candidate in LEVELS:
             if candidate not in keys:
                 continue

@@ -65,9 +65,33 @@ _TEXT_SIGNALS = (
 )
 
 
+# Model searches also return accessories and parts: "Чехол для iPhone 13", "Дисплей iPhone 13".
+# The title must start with the item and continue with a preposition or a Latin model name,
+# so "Дисплей разбит" or "iPhone 13 + чехол" stay devices. A dummy is never a device.
+_ACCESSORY = re.compile(
+    r"^(?:чехл?\w*|стекл\w*|защитн\w*|пленк\w*|дисплей|матриц\w*|корпус|крышк\w*|"
+    r"аккумулятор\w*|батаре\w*|зарядк\w*|зарядн\w*|блок питания|кабель|шнур|наушник\w*|"
+    r"коробк\w*|клавиатур\w*|сумк\w*|рюкзак|подставк\w*|держател\w*|шлейф\w*|"
+    r"запчаст\w*)\s+(?:для|на|от|к|под|[a-z])"
+    r"|\bмуляж\w*"
+)
+ACCESSORY = Signal(
+    "accessory_not_device",
+    0,
+    "Похоже на аксессуар, запчасть или муляж — не сравнивается с устройствами",
+    excludes_from_market=True,
+)
+
+
+def is_accessory(listing: Listing) -> bool:
+    return _ACCESSORY.search(normalize_text(listing.title)) is not None
+
+
 def text_signals(listing: Listing) -> list[Signal]:
     text = normalize_text(f"{listing.title} {listing.description or ''}")
     found = [signal for pattern, signal in _TEXT_SIGNALS if pattern.search(text)]
+    if is_accessory(listing):
+        found.append(ACCESSORY)
     if listing.description is not None and len(listing.description.strip()) < 20:
         found.append(Signal("short_description", 10, "Описание очень короткое"))
     return found
