@@ -5,6 +5,7 @@ Pure computation: nothing is read from or written to Firestore.
 
 import argparse
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -42,6 +43,15 @@ def main():
         ),
     }
     print(json.dumps(output, ensure_ascii=False, indent=2))
+    results = analysis.results
+    summary = {
+        "listings": len(results),
+        "withMarketPrice": sum(r.market_price is not None for r in results),
+        "deals": sum(r.is_deal for r in results),
+        "riskMediumOrHigh": sum(r.risk_level in {"medium", "high"} for r in results),
+        "groups": len(analysis.stats),
+    }
+    print(json.dumps(summary), file=sys.stderr)
 
 
 if __name__ == "__main__":

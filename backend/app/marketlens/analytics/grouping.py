@@ -71,6 +71,28 @@ _MODEL_PATTERNS = (
     ("google", re.compile(r"\bpixel\s*(\d{1,2}a?)(?:\s*(pro\s*xl|pro|xl))?(?!\w)")),
 )
 
+# Other brands: "<brand> [series] <code with a digit> [suffix]", e.g. "Tecno Spark 20 Pro",
+# "Honor X8b", "Huawei P30 Lite". The code must not be a storage size ("128 gb").
+_GENERIC_BRANDS = {
+    "huawei": "huawei",
+    "honor": "honor",
+    "realme": "realme",
+    "oneplus": "oneplus",
+    "one plus": "oneplus",
+    "oppo": "oppo",
+    "vivo": "vivo",
+    "tecno": "tecno",
+    "infinix": "infinix",
+    "nokia": "nokia",
+    "motorola": "motorola",
+    "moto": "motorola",
+}
+_GENERIC_MODEL = re.compile(
+    r"\b(one plus|oneplus|huawei|honor|realme|oppo|vivo|tecno|infinix|nokia|motorola|moto)\s+"
+    r"((?:[a-z]+\s+)?[a-z]*\d{1,3}[a-z]?)(?!\s*(?:gb|tb)\b)(?!\s*/)"
+    r"(?:\s+(pro\s*plus|pro\+|pro|plus|lite|ultra|neo|prime|max))?(?!\w)"
+)
+
 _BRANDS = (
     ("apple", re.compile(r"\b(?:iphone|apple)\b")),
     ("samsung", re.compile(r"\b(?:samsung|galaxy)\b")),
@@ -116,16 +138,29 @@ class ProductKey:
 
 def product_key(title: str) -> ProductKey:
     text = normalize_text(title)
+    found = _specific_model(text) or _generic_model(text)
+    if found is None:
+        brand = next((name for name, pattern in _BRANDS if pattern.search(text)), None)
+        return ProductKey(brand, None, _storage(text))
+    brand, name, end = found
+    storage = _storage(text)
+    if storage is None and (bare := _STORAGE_BARE.match(text, end)):
+        storage = f"{bare[1]}gb"
+    return ProductKey(brand, f"{brand}-{name}", storage)
+
+
+def _specific_model(text: str) -> tuple[str, str, int] | None:
     for brand, pattern in _MODEL_PATTERNS:
         if match := pattern.search(text):
             prefix = {"apple": "iphone", "samsung": "galaxy", "google": "pixel"}.get(brand)
-            name = _slug(prefix, match[1], match[2])
-            storage = _storage(text)
-            if storage is None and (bare := _STORAGE_BARE.match(text, match.end())):
-                storage = f"{bare[1]}gb"
-            return ProductKey(brand, f"{brand}-{name}", storage)
-    brand = next((name for name, pattern in _BRANDS if pattern.search(text)), None)
-    return ProductKey(brand, None, _storage(text))
+            return brand, _slug(prefix, match[1], match[2]), match.end()
+    return None
+
+
+def _generic_model(text: str) -> tuple[str, str, int] | None:
+    if match := _GENERIC_MODEL.search(text):
+        return _GENERIC_BRANDS[match[1]], _slug(match[2], match[3]), match.end()
+    return None
 
 
 def _storage(text: str) -> str | None:
