@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from app.marketlens.contracts import CollectionRequest, Listing, Source
 
 CATEGORY = "electronics"
-CATEGORY_URL = "https://www.olx.kz/elektronika/telefony-i-aksesuary/mobilnye-telefony/"
+CATEGORY_URL = "https://www.olx.kz/elektronika/telefony-i-aksesuary/mobilnye-telefony-smartfony/"
 USER_AGENT = "MarketLens/1.0"
 DETAIL_PATH = re.compile(r"/d/(?:obyavlenie|ogoloshennya)/[^/]+-ID([A-Za-z0-9]+)\.html")
 PRICE = re.compile(r"([0-9]+(?: [0-9]{3})*)(?:[,.]([0-9]{1,2}))? (?:тг\.?|₸|KZT)", re.I)
