@@ -6,6 +6,7 @@ from firebase_admin import auth
 
 from app.core.config import Settings
 from app.core.firebase import FirebaseRuntime
+from app.marketlens.settings import MarketLensSettings
 
 
 def main() -> None:
@@ -15,8 +16,9 @@ def main() -> None:
     parser.add_argument("uid")
     parser.add_argument("role", choices=["analyst", "admin"])
     parser.add_argument("--project-confirm", required=True)
+    parser.add_argument("--marketlens", action="store_true")
     args = parser.parse_args()
-    settings = Settings()
+    settings = MarketLensSettings() if args.marketlens else Settings()
     if args.project_confirm != settings.firebase_project_id:
         parser.error("Project confirmation does not match FIREBASE_PROJECT_ID")
     runtime = FirebaseRuntime(settings)
