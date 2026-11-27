@@ -1,4 +1,4 @@
-from datetime import UTC, date
+from datetime import UTC, date, datetime
 from hashlib import sha256
 
 from firebase_admin import firestore
@@ -161,7 +161,39 @@ class MarketStore:
             items.append(ListingItem(listing=listing, analysis=result))
         return items
 
+    def publish_stats(self, stats: list[MarketStats], computed_at: datetime) -> int:
+        """Atomically expose one complete, bounded generation on the dashboard."""
+        reference = self.db.collection("marketStats").document("_current")
+        ordered = [item for item in stats if item.dataset == "real"]
+        items = [item.model_dump(mode="json", by_alias=True) for item in ordered[:STATS_LIMIT]]
+
+        @firestore.transactional
+        def publish(transaction):
+            existing = reference.get(transaction=transaction).to_dict()
+            if existing is not None and existing["computedAt"] >= computed_at:
+                return 0
+            transaction.set(
+                reference,
+                {
+                    "computedAt": computed_at,
+                    "algorithmVersion": ALGORITHM_VERSION,
+                    "items": items,
+                    "truncated": len(ordered) > STATS_LIMIT,
+                },
+            )
+            return len(items)
+
+        return publish(self.db.transaction())
+
     def get_stats(self) -> tuple[list[MarketStats], bool]:
+        current = self.db.collection("marketStats").document("_current").get().to_dict()
+        if current is not None:
+            if current["algorithmVersion"] != ALGORITHM_VERSION:
+                return [], False
+            return (
+                [MarketStats.model_validate(item) for item in current["items"]],
+                current["truncated"],
+            )
         records = list(
             self.db.collection("marketStats")
             .where(filter=firestore.FieldFilter("dataset", "==", "real"))

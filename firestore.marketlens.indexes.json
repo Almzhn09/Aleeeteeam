@@ -9,5 +9,7 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    { "collectionGroup": "marketStats", "fieldPath": "items", "indexes": [] }
+  ]
 }

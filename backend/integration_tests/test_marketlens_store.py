@@ -127,3 +127,27 @@ def test_explanation_budget_is_isolated_per_user_and_day(db):
     assert store.reserve_explanation("analyst-two", day, **limits)
     assert not store.reserve_explanation("analyst-three", day, **limits)
     assert store.reserve_explanation("analyst/one", day + timedelta(days=1), **limits)
+
+
+def test_dashboard_stats_publish_as_one_generation(db):
+    store = MarketStore(db)
+    now = datetime(2026, 11, 27, tzinfo=UTC)
+    original = MarketStats(
+        dataset="real",
+        computed_at=now,
+        comparable_group="previous-group",
+        category="electronics",
+        currency="KZT",
+        sample_size=1,
+    )
+    updated_at = now + timedelta(days=1)
+    current = original.model_copy(
+        update={"comparable_group": "latest-group", "computed_at": updated_at}
+    )
+
+    assert store.publish_stats([original], now) == 1
+    assert store.publish_stats([current], updated_at) == 1
+    assert store.publish_stats([original], now) == 0
+    assert store.get_stats() == ([current], False)
+    assert store.publish_stats([], updated_at + timedelta(days=1)) == 0
+    assert store.get_stats() == ([], False)

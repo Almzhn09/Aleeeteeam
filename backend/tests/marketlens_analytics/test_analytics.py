@@ -302,9 +302,10 @@ def test_analyze_store_saves_results_and_stats_through_public_methods():
             self.results.append(result)
             return True
 
-        def save_stats(self, stats):
-            self.stats.append(stats)
-            return True
+        def publish_stats(self, stats, computed_at):
+            assert computed_at == COMPUTED
+            self.stats.extend(stats)
+            return len(stats)
 
     store = FakeStore()
     summary = analyze_store(store, computed_at=COMPUTED)

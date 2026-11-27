@@ -68,7 +68,7 @@ riskLevel: unknown | low | medium | high. Положительное savingsAmou
 scrapedAt, dataset, price и currency отдельно от исходной карточки.
 `analysisResults/{id}` содержит AnalysisResult, связанный с scrapedAt.
 API возвращает analysis=null при несовпадении версии снимка или алгоритма. `marketStats` хранит
-MarketStats с dataset, computedAt, comparableGroup, category, currency,
+текущий набор MarketStats в документе _current. Каждый MarketStats содержит dataset, computedAt, comparableGroup, category, currency,
 sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 (массив min/max/count). `ingestionRuns` зарезервирована под итог запуска
 (source, startedAt, finishedAt, status, collectedCount, uniqueCount).

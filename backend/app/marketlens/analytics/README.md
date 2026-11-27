@@ -18,7 +18,7 @@ analysis.stats  # list[MarketStats] — группы оценки и обзор 
 - `computed_at` обязателен и должен содержать часовой пояс.
 - `algorithmVersion` = `ALGORITHM_VERSION` (`"v2"`). При смене формулы версия
   поднимается — API может сравнить версию и вернуть `analysis=null`.
-- Сохранение: `MarketStore.save_analysis(result)` и `save_stats(stats)` из core
+- Сохранение: `MarketStore.save_analysis(result)` и `publish_stats(stats, computed_at)` из core
   уже принимают эти объекты без изменений контракта.
 
 Сценарий для интеграции (Артур): после импорта прочитать актуальные карточки
