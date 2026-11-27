@@ -44,6 +44,10 @@ def test_market_store_keeps_snapshots_and_matches_current_analysis(db):
         (row.scraped_at, 85000),
     ]
     assert store.price_history(row.id, 1).truncated
+    snapshots = sorted(
+        (listing_id, item.price) for listing_id, item in store.price_snapshots([row.id])
+    )
+    assert snapshots == [(row.id, 80000), (row.id, 85000)]
 
     result = AnalysisResult(
         listing_id=latest.id,

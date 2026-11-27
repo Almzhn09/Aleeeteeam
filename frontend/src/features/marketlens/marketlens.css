@@ -238,3 +238,123 @@
 @media (prefers-reduced-motion: reduce) {
   .ml-shell *, .ml-shell *::before, .ml-shell *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---- Главная по референсу: логотип, тренды KPI, линейный график ---- */
+.ml-logo svg.ml-logo-mark { width: 30px; height: 30px; padding: 0; background: none; border-radius: 0; }
+.ml-theme { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #2d3a33; }
+.ml-theme:hover { background: #f1f6f2; }
+.ml-logout { padding: 10px 26px; }
+.ml-hero h1 { font-size: clamp(32px, 3.6vw, 44px); line-height: 1.12; }
+.ml-hero h1 em { color: #14532d; }
+.ml-lead { font-size: 16px; line-height: 1.6; }
+.ml-hero-art svg { max-width: 380px; }
+.ml-hero-glow { fill: #dcefe3; opacity: 0.75; }
+.ml-features li > span { width: 54px; height: 54px; border-radius: 16px; }
+.ml-kpi { align-items: center; padding: 20px 22px; }
+.ml-kpi > div { min-width: 0; flex: 1; }
+.ml-kpi-icon { width: 50px; height: 50px; }
+.ml-trend { position: absolute; top: 18px; right: 18px; display: inline-flex; align-items: center; gap: 2px;
+  font-size: 13px; font-weight: 700; }
+.ml-trend.good { color: #15803d; }
+.ml-trend.bad { color: #dc2626; }
+.ml-title-icon { display: flex; align-items: center; gap: 8px; }
+.ml-title-icon > svg { color: #f97316; }
+.ml-info { display: inline-grid; color: var(--muted-foreground); cursor: help; }
+.ml-pills button { padding: 7px 14px; border-radius: 12px; background: transparent; }
+.ml-line { position: relative; margin: 4px 0 10px; }
+.ml-line svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ml-grid line { stroke: #e8eee9; }
+.ml-grid text, .ml-axis-x { fill: #6b7a72; font-size: 12px; }
+.ml-line-path { fill: none; stroke: #22a356; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: ml-draw 0.9s ease-out forwards; }
+.ml-line-area { animation: ml-fade 0.9s ease-out both; }
+.ml-line-dot { fill: #22a356; stroke: #fff; stroke-width: 2.5; animation: ml-fade 0.6s 0.3s ease-out both; }
+.ml-line-tip { position: absolute; transform: translate(-82%, calc(-100% - 16px)); display: grid; justify-items: center;
+  padding: 6px 12px; border-radius: 10px; background: #dcfce7; color: #14532d; font-size: 13px; line-height: 1.35;
+  box-shadow: 0 6px 16px rgba(17, 40, 26, 0.12); white-space: nowrap; pointer-events: none;
+  animation: ml-fade 0.4s 0.6s ease-out both; }
+.ml-line-tip strong { font-size: 14px; }
+.ml-chart-note { margin-bottom: 10px; }
+.ml-deal-body strong { font-weight: 650; }
+.ml-deal-price strong { font-size: 19px; font-weight: 750; }
+.ml-badge { padding: 4px 10px; }
+@keyframes ml-draw { to { stroke-dashoffset: 0; } }
+@keyframes ml-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 720px) {
+  .ml-theme { width: 36px; height: 36px; }
+  .ml-logout { padding: 9px 16px; }
+  .ml-trend { top: 14px; right: 14px; }
+  .ml-line-tip { font-size: 12px; padding: 4px 8px; }
+}
+
+/* ---- Тёмная тема ---- */
+.ml-shell.ml-dark {
+  --background: #131a16;
+  --foreground: #e6efe9;
+  --primary: #22a356;
+  --primary-foreground: #06150c;
+  --muted: #1d2721;
+  --muted-foreground: #9fb0a6;
+  --border: #2a362f;
+  --ml-green: #4ade80;
+  --ml-green-soft: #18321f;
+  --ml-ink: #e6efe9;
+  --ml-card-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+  background: radial-gradient(900px 420px at 72% -80px, #15301f 0%, transparent 70%), #0d1310;
+}
+.ml-dark .ml-header { background: rgba(13, 19, 16, 0.86); border-bottom-color: #1f2a23; }
+.ml-dark .ml-nav-link, .ml-dark .ml-theme { color: #c9d6ce; }
+.ml-dark .ml-nav-link:hover, .ml-dark .ml-theme:hover { background: #1a241e; }
+.ml-dark .ml-nav-link.active { color: #86efac; }
+.ml-dark .ml-logout, .ml-dark .ml-search button { background: #22a356; color: #06150c; }
+.ml-dark .ml-logout:hover, .ml-dark .ml-search button:hover { background: #34c26b; }
+.ml-dark .ml-hero h1 em { color: #4ade80; }
+.ml-dark .ml-lead, .ml-dark .ml-features li { color: #a9b8b0; }
+.ml-dark .ml-hero-glow { fill: #173322; }
+.ml-dark .ml-search, .ml-dark .ml-kpi, .ml-dark .ml-card, .ml-dark .ml-category, .ml-dark .ml-features li > span,
+.ml-dark .panel, .ml-dark .ml-auth > section, .ml-dark .ml-quick a, .ml-dark .ml-select select,
+.ml-dark .filter-bar select { background: #161f1a; color: var(--ml-ink); }
+.ml-dark .ml-features li > span { color: #4ade80; }
+.ml-dark .ml-search input { color: var(--ml-ink); }
+.ml-dark .ml-kpi-icon.green { background: #18321f; color: #4ade80; }
+.ml-dark .ml-kpi-icon.red { background: #3a1717; color: #f87171; }
+.ml-dark .ml-kpi-icon.amber { background: #3a2e12; color: #fbbf24; }
+.ml-dark .ml-trend.good { color: #4ade80; }
+.ml-dark .ml-trend.bad { color: #f87171; }
+.ml-dark .ml-pills button { border-color: #2a362f; color: #c9d6ce; }
+.ml-dark .ml-pills button[aria-pressed="true"] { background: #18321f; border-color: #2f6b45; color: #86efac; }
+.ml-dark .ml-grid line { stroke: #24302a; }
+.ml-dark .ml-grid text, .ml-dark .ml-axis-x { fill: #8fa197; }
+.ml-dark .ml-line-dot { stroke: #161f1a; }
+.ml-dark .ml-line-tip { background: #18321f; color: #bbf7d0; }
+.ml-dark .ml-more, .ml-dark .detail-link, .ml-dark .source-link { color: #4ade80; }
+.ml-dark .ml-deals li + li { border-top-color: #222d27; }
+.ml-dark .ml-thumb, .ml-dark .ml-chips span, .ml-dark .ml-arrow, .ml-dark .ml-category-photo,
+.ml-dark .ml-metrics div { background: #1d2721; color: #b4c3ba; }
+.ml-dark .ml-badge, .ml-dark .ml-risk-low { background: #18321f; color: #86efac; }
+.ml-dark .ml-risk-medium, .ml-dark .ml-note { background: #3a2e12; color: #fcd34d; }
+.ml-dark .ml-risk-high { background: #3a1717; color: #fca5a5; }
+.ml-dark .ml-risk-unknown { background: #1d2721; color: #b4c3ba; }
+.ml-dark .ml-bars { border-bottom-color: #24302a; }
+.ml-dark .ml-bar-count { color: #c9d6ce; }
+.ml-dark .ml-radar .ml-bars li .ml-bar { background: #2a3a30; }
+.ml-dark .ml-radar .ml-bars li.fits .ml-bar { background: linear-gradient(180deg, #4ade80, #16a34a); }
+.ml-dark .page-heading h1, .ml-dark .panel h2, .ml-dark .form-field > label { color: var(--ml-ink); }
+.ml-dark .page-heading p, .ml-dark .panel-heading p { color: #a9b8b0; }
+.ml-dark input, .ml-dark select, .ml-dark textarea { background: transparent; color: var(--ml-ink); border-color: #2a362f; }
+.ml-dark .form-field input, .ml-dark .form-field select { background: #10160f; border-color: #2a362f; }
+.ml-dark .ml-logo-mark path:first-child { fill: #4ade80; }
+.ml-main { padding-top: 20px; }
+.ml-hero { margin-bottom: 22px; gap: 20px; }
+.ml-kicker { margin-bottom: 10px; }
+.ml-lead { margin: 12px 0 22px; }
+.ml-kpi:has(.ml-trend) > div { padding-right: 56px; }
+.ml-chips span { white-space: nowrap; }
+@media (max-width: 720px) {
+  .ml-grid text, .ml-axis-x { font-size: 22px; }
+  .ml-line-dot { stroke-width: 3; }
+  .ml-kpi:has(.ml-trend) > div { padding-right: 0; }
+  .ml-deal .ml-chips span + span { display: none; }
+}
+.ml-dark .form-field select, .ml-dark .form-field input::placeholder { color: #b4c3ba; }

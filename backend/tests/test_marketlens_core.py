@@ -90,6 +90,13 @@ class Store:
             truncated=True,
         )
 
+    def price_snapshots(self, listing_ids):
+        return [
+            (row.id, PriceObservation(scraped_at=row.scraped_at, price=row.price, currency="KZT"))
+            for row in self.rows
+            if row.id in listing_ids
+        ]
+
     def get_stats(self):
         return [], False
 
@@ -433,3 +440,33 @@ def test_catalog_offset_above_the_previous_limit():
     assert page.status_code == 200
     assert page.json()["items"][0]["listing"]["id"] == "olx:1008"
     assert page.json()["nextOffset"] == 1009
+
+
+def test_price_trend_keeps_one_latest_price_per_listing_and_day():
+    from datetime import timedelta
+
+    from app.marketlens.radar import price_trend
+
+    day = datetime(2026, 11, 25, 6, tzinfo=UTC)
+    observations = [
+        ("a", day, 100.0),
+        ("a", day + timedelta(hours=3), 120.0),  # same day, later: replaces 100
+        ("b", day, 200.0),
+        ("a", day + timedelta(days=1), 90.0),
+        ("b", day + timedelta(days=1), 0.0),  # symbolic price is ignored
+        ("c", day - timedelta(days=200), 50.0),  # older than 90 days before the last day
+    ]
+
+    class Snapshots:
+        def price_snapshots(self, listing_ids):
+            assert listing_ids == ["a", "b", "c"]
+            return [
+                (key, PriceObservation(scraped_at=when, price=price, currency="KZT"))
+                for key, when, price in observations
+            ]
+
+    trend = price_trend(Snapshots(), ["a", "b", "c"])
+    assert [(point.day.isoformat(), point.median_price, point.count) for point in trend] == [
+        ("2026-11-25", 160.0, 2),
+        ("2026-11-26", 90.0, 1),
+    ]

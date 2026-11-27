@@ -140,7 +140,7 @@ it('restores filters from a shared URL and keeps them when paging and returning'
   ))
 })
 
-it('shows live counts, top deals and price distribution on the home page', async () => {
+it('shows live counts, top deals and the price trend on the home page', async () => {
   const deal: ListingItem = {
     listing: { ...row.listing, id: 'olx:deal', title: 'iPhone 13 128GB', subcategory: 'phones', price: 272000 },
     analysis: {
@@ -159,13 +159,12 @@ it('shows live counts, top deals and price distribution on the home page', async
     }
     if (path.includes('view=deals')) return { items: [deal], nextOffset: null, scanLimited: false, scannedCount: 30 }
     if (path.includes('view=risk')) return { items: [], nextOffset: null, scanLimited: false, scannedCount: 30 }
-    if (path.endsWith('/stats')) return {
-      truncated: false,
-      items: [{
-        dataset: 'real', computedAt: row.listing.scrapedAt, comparableGroup: 'electronics/phones:apple-iphone-13:any:KZT',
-        category: 'electronics', currency: 'KZT', sampleSize: 7, meanPrice: 320000, medianPrice: 325000,
-        minPrice: 272000, maxPrice: 350000, histogram: [{ min: 272000, max: 311000, count: 2 }, { min: 311000, max: 350000, count: 5 }],
-      }],
+    if (path.includes('/radar?')) return {
+      groups: [{ key: 'electronics/phones:apple-iphone-13:any:KZT', sampleSize: 7 }],
+      sample: {
+        key: 'electronics/phones:apple-iphone-13:any:KZT', prices: [272000, 325000], medianPrice: 325000,
+        trend: [{ day: '2026-11-26', medianPrice: 330000, count: 6 }, { day: '2026-11-27', medianPrice: 325000, count: 7 }],
+      },
     }
     return { items: [row], nextOffset: null, scanLimited: false, scannedCount: 1 }
   })
@@ -182,11 +181,14 @@ it('shows live counts, top deals and price distribution on the home page', async
   expect(tileUrl.searchParams.get('city')).toBe('Усть-Каменогорск')
   expect(tileUrl.searchParams.get('subcategory')).toBe('tablets')
   expect(tabletTile.querySelector('img')).toHaveAttribute('src', row.listing.images[0])
-  expect(screen.getByText(/Последний сбор/)).toBeVisible()
+  expect(within(kpis).getByText(/^Сбор:/)).toBeVisible()
+  expect(within(kpis).getByText(/−1,5%/)).toHaveTextContent('за 7 дней')
   expect(api.mock.calls.filter(([path]) => String(path).includes('view=all'))).toHaveLength(1)
   expect(await screen.findByRole('link', { name: /iPhone 13 128GB/ })).toHaveAttribute('href', '/listings/olx%3Adeal')
-  expect(screen.getByText('-16% от рынка')).toBeVisible()
-  expect(screen.getByText('iPhone 13 · 7 объявл.')).toBeVisible()
+  expect(screen.getByText('−16% от рынка')).toBeVisible()
+  expect(screen.getByRole('img', { name: /26\.11: 330\s000 ₸; 27\.11: 325\s000 ₸/ })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '30 дней' }))
+  expect(screen.getByRole('button', { name: '30 дней' })).toHaveAttribute('aria-pressed', 'true')
   fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск объявлений' }), { target: { value: 'iphone 13' } })
   fireEvent.click(screen.getByRole('button', { name: 'Найти' }))
   await waitFor(() => expect(api).toHaveBeenLastCalledWith(

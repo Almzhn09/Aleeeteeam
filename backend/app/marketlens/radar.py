@@ -1,6 +1,7 @@
 """Group observed prices for the interactive radar."""
 
 from collections import defaultdict
+from datetime import date, datetime, timedelta, timezone
 from statistics import median
 
 from app.marketlens.analytics.engine import MIN_PEERS, histogram
@@ -9,10 +10,18 @@ from app.marketlens.analytics.risk import text_signals
 from app.marketlens.contracts import Listing, ListingItem, MarketModel, PriceBin
 from app.marketlens.store import MarketStore
 
+ALMATY = timezone(timedelta(hours=5))  # Kazakhstan uses UTC+5 all year.
+
 
 class RadarGroup(MarketModel):
     key: str
     sample_size: int
+
+
+class TrendPoint(MarketModel):
+    day: date
+    median_price: float
+    count: int
 
 
 class RadarSample(MarketModel):
@@ -21,6 +30,36 @@ class RadarSample(MarketModel):
     median_price: float | None
     histogram: list[PriceBin]
     offers: list[ListingItem]
+    trend: list[TrendPoint] = []
+
+
+TREND_DAYS = 90
+
+
+def price_trend(store: MarketStore, listing_ids: list[str]) -> list[TrendPoint]:
+    """Daily median of the cohort's observed prices (Kazakhstan days, last 90 days).
+
+    One price per listing and day: the latest observation of that day.
+    """
+    latest: dict[tuple[date, str], tuple[datetime, float]] = {}
+    for listing_id, row in store.price_snapshots(listing_ids):
+        if row.currency != "KZT" or row.price is None or row.price <= 0:
+            continue
+        day = row.scraped_at.astimezone(ALMATY).date()
+        seen = latest.get((day, listing_id))
+        if seen is None or seen[0] < row.scraped_at:
+            latest[(day, listing_id)] = (row.scraped_at, row.price)
+    by_day: dict[date, list[float]] = defaultdict(list)
+    for (day, _), (_, price) in latest.items():
+        by_day[day].append(price)
+    if not by_day:
+        return []
+    since = max(by_day) - timedelta(days=TREND_DAYS - 1)
+    return [
+        TrendPoint(day=day, median_price=round(median(prices), 2), count=len(prices))
+        for day, prices in sorted(by_day.items())
+        if day >= since
+    ]
 
 
 class RadarPage(MarketModel):
@@ -63,5 +102,6 @@ def radar(store: MarketStore, *, city: str, group: str) -> RadarPage:
             median_price=round(median(prices), 2) if len(prices) > MIN_PEERS else None,
             histogram=histogram(prices),
             offers=store.with_analysis([row for _, row in rows[:24]]),
+            trend=price_trend(store, [row.id for _, row in rows]),
         )
     return RadarPage(groups=groups, sample=sample, scan_limited=False)
