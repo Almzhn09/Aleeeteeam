@@ -59,11 +59,11 @@ describe('MarketLens workspace', () => {
     expect(await screen.findByRole('link', { name: 'Открыть источник ↗' }))
       .toHaveAttribute('href', row.listing.url)
     const history = await screen.findByRole('region', { name: 'История цен' })
-    expect(await within(history).findByText(/85\s000 KZT/)).toBeVisible()
+    expect(await within(history).findByText(/85\s000 ₸/)).toBeVisible()
     expect(within(history).getByText('Неизвестна')).toBeVisible()
     expect(within(history).getByText('Показаны последние 2 снимков.')).toBeVisible()
     fireEvent.click(within(history).getByRole('button', { name: 'Показать больше снимков' }))
-    expect(await within(history).findByText(/80\s000 KZT/)).toBeVisible()
+    expect(await within(history).findByText(/80\s000 ₸/)).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Получить пояснение' }))
     expect(await screen.findByText('Локальное пояснение')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'К каталогу' })).toHaveAttribute('href', '/listings?city=%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B')
@@ -129,5 +129,47 @@ it('restores filters from a shared URL and keeps them when paging and returning'
   fireEvent.click(screen.getByRole('button', { name: 'Сбросить' }))
   await waitFor(() => expect(api).toHaveBeenLastCalledWith(
     '/api/v1/market/listings?view=risk&offset=0', expect.any(Object),
+  ))
+})
+
+it('shows live counts, top deals and price distribution on the home page', async () => {
+  const deal: ListingItem = {
+    listing: { ...row.listing, id: 'olx:deal', title: 'iPhone 13 128GB', subcategory: 'phones', price: 272000 },
+    analysis: {
+      listingId: 'olx:deal', listingScrapedAt: row.listing.scrapedAt, computedAt: row.listing.scrapedAt,
+      algorithmVersion: 'v3', comparableGroup: 'electronics/phones:apple-iphone-13:any:KZT',
+      marketPrice: 325000, priceDeviationPercent: -16.3, savingsAmount: 53000, dealScore: 72,
+      riskScore: 0, riskLevel: 'low', riskReasons: [], confidence: 0.5, sampleSize: 6, isDeal: true,
+    },
+  }
+  const api = vi.fn().mockImplementation(async (path: string) => {
+    if (path.includes('view=all')) return { items: [row], nextOffset: 1, scanLimited: false, scannedCount: 30 }
+    if (path.includes('view=deals')) return { items: [deal], nextOffset: null, scanLimited: false, scannedCount: 30 }
+    if (path.includes('view=risk')) return { items: [], nextOffset: null, scanLimited: false, scannedCount: 30 }
+    if (path.endsWith('/stats')) return {
+      truncated: false,
+      items: [{
+        dataset: 'real', computedAt: row.listing.scrapedAt, comparableGroup: 'electronics/phones:apple-iphone-13:any:KZT',
+        category: 'electronics', currency: 'KZT', sampleSize: 7, meanPrice: 320000, medianPrice: 325000,
+        minPrice: 272000, maxPrice: 350000, histogram: [{ min: 272000, max: 311000, count: 2 }, { min: 311000, max: 350000, count: 5 }],
+      }],
+    }
+    return { items: [row], nextOffset: null, scanLimited: false, scannedCount: 1 }
+  })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(), signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+
+  expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Умный поиск выгодных')
+  const kpis = screen.getByRole('region', { name: 'Ключевые показатели' })
+  expect(await within(kpis).findByText('30')).toBeVisible()
+  expect(within(kpis).getByText('Медиана (iPhone 13)')).toBeVisible()
+  expect(await screen.findByRole('link', { name: /iPhone 13 128GB/ })).toHaveAttribute('href', '/listings/olx%3Adeal')
+  expect(screen.getByText('-16% от рынка')).toBeVisible()
+  expect(screen.getByText('iPhone 13 · 7 объявл.')).toBeVisible()
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск объявлений' }), { target: { value: 'iphone 13' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Найти' }))
+  await waitFor(() => expect(api).toHaveBeenLastCalledWith(
+    '/api/v1/market/listings?q=iphone+13&view=all&offset=0', expect.any(Object),
   ))
 })

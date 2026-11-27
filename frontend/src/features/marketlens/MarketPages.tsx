@@ -8,11 +8,10 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { useApiQuery } from '@/lib/useApiQuery'
 import { errorMessage } from '@/lib/labels'
 import { ListingHistory } from './dashboard/ListingHistory'
-import { MarketDistribution } from './dashboard/MarketDistribution'
 import { PriceComparison } from './dashboard/PriceComparison'
 import { formatPrice, marketCategories, marketNumber } from './dashboard/format'
 import type {
-  CatalogView, Explanation, ListingItem, ListingPage, RiskLevel, StatsPage,
+  CatalogView, Explanation, ListingItem, ListingPage, RiskLevel,
 } from '@/lib/marketlens'
 
 const apiPath = '/api/v1/market'
@@ -27,13 +26,16 @@ function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string })
   const detailed = catalog === undefined
   const { listing, analysis } = item
   const image = listing.images.find(url => url.startsWith('https://'))
-  return <article className="panel overflow-hidden">
+  return <article className="panel overflow-hidden ml-listing">
     {image && <img src={image} alt="" className="aspect-video w-full bg-muted object-contain"
       loading="lazy" referrerPolicy="no-referrer" />}
     <div className="content-pad space-y-3">
-      <p className="text-sm text-muted-foreground">{[listing.source.toUpperCase(), listing.city, marketCategories[listing.subcategory ?? ''] ?? listing.category].filter(Boolean).join(' · ')}</p>
+      <p className="ml-chips">{[listing.source.toUpperCase(), listing.city, marketCategories[listing.subcategory ?? ''] ?? listing.category].filter(Boolean).map(part => <span key={part}>{part}</span>)}</p>
       <h2 className="text-lg font-semibold break-words">{listing.title}</h2>
-      <p className="text-2xl font-semibold">{formatPrice(listing.price, listing.currency)}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-2xl font-bold">{formatPrice(listing.price, listing.currency)}</p>
+        {analysis?.priceDeviationPercent != null && analysis.priceDeviationPercent < 0 && <span className="ml-badge">{marketNumber.format(Math.round(analysis.priceDeviationPercent))}% от рынка</span>}
+      </div>
       {listing.description && <p className={detailed ? 'whitespace-pre-wrap break-words' : 'line-clamp-2 break-words'}>{listing.description}</p>}
       {detailed ? <PriceComparison item={item} /> : <dl className="grid grid-cols-2 gap-3 text-sm">
         <div><dt className="text-muted-foreground">Оценка рынка</dt><dd>{formatPrice(analysis?.marketPrice ?? null, listing.currency)}</dd></div>
@@ -41,7 +43,7 @@ function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string })
           <dd>{analysis.priceDeviationPercent > 0 ? '+' : ''}{marketNumber.format(analysis.priceDeviationPercent)}%</dd>
         </div>}
       </dl>}
-      <p className="text-sm">Риск: <strong>{riskLabels[analysis?.riskLevel ?? 'unknown']}</strong></p>
+      <p className="text-sm">Риск: <strong className={`ml-risk ml-risk-${analysis?.riskLevel ?? 'unknown'}`}>{riskLabels[analysis?.riskLevel ?? 'unknown']}</strong></p>
       {analysis?.isDeal && <p className="text-sm font-semibold text-primary">
         {analysis.savingsAmount != null && analysis.savingsAmount > 0
           ? `Выгода по оценке: ${formatPrice(analysis.savingsAmount, listing.currency)}`
@@ -204,15 +206,3 @@ export function MarketListing() {
   </>
 }
 
-export function MarketOverview() {
-  const query = useApiQuery<StatsPage>(`${apiPath}/stats`)
-  return <>
-    <PageHeading eyebrow="Рынок Казахстана" title="Обзор рынка"
-      description="Сопоставимые предложения по собранным объявлениям."
-      action={<DetailLink to="/listings">Открыть каталог</DetailLink>} />
-    {query.loading && <LoadingState />}
-    {query.error && <ErrorState message={query.error} retry={query.refresh} />}
-    {query.data?.truncated && <p role="status">Показаны первые {query.data.items.length} групп.</p>}
-    {query.data && <MarketDistribution groups={query.data.items} />}
-  </>
-}

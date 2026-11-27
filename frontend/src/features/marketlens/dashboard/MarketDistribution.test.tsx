@@ -17,7 +17,7 @@ describe('MarketDistribution', () => {
     const chart = screen.getByRole('figure', { name: 'Распределение цен' })
     expect(within(chart).getAllByRole('listitem')).toHaveLength(2)
     expect(within(chart).getByText('2 объявл.')).toBeVisible()
-    expect(within(chart).getByText(/90\s000 KZT/)).toBeVisible()
+    expect(within(chart).getByText(/90\s000 ₸/)).toBeVisible()
 
     const selector = screen.getByRole('combobox', { name: 'Сопоставимая группа' })
     fireEvent.change(selector, { target: { value: JSON.stringify(['Смартфоны', 'USD']) } })
