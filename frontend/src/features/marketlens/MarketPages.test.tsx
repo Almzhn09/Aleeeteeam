@@ -49,3 +49,31 @@ describe('MarketLens workspace', () => {
     expect(api).toHaveBeenCalledWith('/api/v1/market/listings/olx%3Atest/explanation', { method: 'POST' })
   })
 })
+
+it('shows the server comparison and reasons on a deal without asking Gemini', async () => {
+  const analyzed: ListingItem = {
+    ...row,
+    analysis: {
+      listingId: row.listing.id, listingScrapedAt: row.listing.scrapedAt,
+      computedAt: '2026-11-27T10:00:00Z', algorithmVersion: 'test',
+      comparableGroup: 'phones', marketPrice: 100000, priceDeviationPercent: -15,
+      savingsAmount: 15000, dealScore: 70, riskScore: 50, riskLevel: 'medium',
+      riskReasons: [{ code: 'gap', description: 'Цена заметно ниже медианы.' }],
+      confidence: 0.7, sampleSize: 12, isDeal: true,
+    },
+  }
+  const api = vi.fn().mockImplementation(async (path: string) => path.includes('/listings?')
+    ? { items: [analyzed], nextOffset: null, scanLimited: false, scannedCount: 1 }
+    : analyzed)
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(),
+    signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/deals']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+
+  expect(await screen.findByText(/Выгода по оценке/)).toBeVisible()
+  expect(api).toHaveBeenCalledWith(expect.stringContaining('view=deals'), expect.any(Object))
+  fireEvent.click(screen.getByRole('link', { name: 'Подробнее' }))
+  expect(await screen.findByRole('region', { name: 'Сравнение цены' })).toHaveTextContent('-15%')
+  expect(screen.getByText('Цена заметно ниже медианы.')).toBeVisible()
+  expect(api.mock.calls.every(([path]) => !String(path).endsWith('/explanation'))).toBe(true)
+})
