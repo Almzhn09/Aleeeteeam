@@ -3,16 +3,22 @@
 set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "Usage: bash deploy/marketlens-expansion-release.sh /path/to/listings.json [/path/to/photos.py]" >&2
+  echo "Usage: bash deploy/marketlens-expansion-release.sh --code-only" >&2
+  echo "   or: bash deploy/marketlens-expansion-release.sh /path/to/listings.json [/path/to/photos.py]" >&2
   exit 2
 fi
 
-data=$(realpath "$1")
-test -s "$data"
+data=""
 photos=""
-if [[ $# -eq 2 ]]; then
-  photos=$(realpath "$2")
-  test -s "$photos"
+if [[ "$1" == --code-only ]]; then
+  [[ $# -eq 1 ]] || exit 2
+else
+  data=$(realpath "$1")
+  test -s "$data"
+  if [[ $# -eq 2 ]]; then
+    photos=$(realpath "$2")
+    test -s "$photos"
+  fi
 fi
 cd "$(git rev-parse --show-toplevel)"
 git diff --quiet HEAD
@@ -39,21 +45,30 @@ export VITE_MARKETLENS_API_BASE_URL="$api"
 
 # Build all release inputs before changing the live API.
 (cd frontend && npm ci && npm run build:marketlens:hosting)
-venv_dir=$(mktemp -d)
-trap 'rm -rf "$venv_dir"' EXIT
-python3 -m venv "$venv_dir"
-"$venv_dir/bin/pip" -q install uv==0.12.23
-(cd backend && "$venv_dir/bin/uv" sync --frozen --python 3.12)
+if [[ -n "$data" ]]; then
+  venv_dir=$(mktemp -d)
+  trap 'rm -rf "$venv_dir"' EXIT
+  python3 -m venv "$venv_dir"
+  "$venv_dir/bin/pip" -q install uv==0.12.23
+  (cd backend && "$venv_dir/bin/uv" sync --frozen --python 3.12)
+fi
 
 "${cloud[@]}" builds submit --config=deploy/marketlens-cloudbuild.yaml \
   --substitutions="_IMAGE=$image"
 "${cloud[@]}" run deploy marketlens-api --region="$region" --image="$image"
 curl -fsS --max-time 30 "$api/api/v1/health" | jq -e '.status == "ok"' >/dev/null
 
-export MARKETLENS_FIREBASE_ENABLED=true
-(
-  cd backend
-  .venv/bin/python - "$data" <<'PY'
+radar_status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$api/api/v1/market/radar")
+if [[ "$radar_status" != 401 ]]; then
+  echo "The deployed radar route returned HTTP $radar_status; expected 401 before login." >&2
+  exit 1
+fi
+
+if [[ -n "$data" ]]; then
+  export MARKETLENS_FIREBASE_ENABLED=true
+  (
+    cd backend
+    .venv/bin/python - "$data" <<'PY'
 import subprocess
 import sys
 from unittest.mock import patch
@@ -73,10 +88,11 @@ with patch("google.auth.default", return_value=(credentials, "hackos20")):
     sys.argv = ["refresh_analytics"]
     refresh_analytics()
 PY
-  if [[ -n "$photos" ]]; then
-    .venv/bin/python "$photos" "$project"
-  fi
-)
+    if [[ -n "$photos" ]]; then
+      .venv/bin/python "$photos" "$project"
+    fi
+  )
+fi
 
 npx --yes firebase-tools@15.34.0 deploy \
   --project "$project" --config firebase.marketlens.json --only hosting --non-interactive
