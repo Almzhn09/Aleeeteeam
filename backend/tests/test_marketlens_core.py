@@ -192,3 +192,24 @@ def test_gemini_uses_only_metrics_and_falls_back_on_timeout():
     assert explain(item, settings, transport=httpx.MockTransport(timeout)).provider == "local"
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"candidates": []}))
     assert explain(item, settings, transport=transport).provider == "local"
+
+
+def test_emulator_requires_both_loopback_services_and_demo_project(monkeypatch):
+    monkeypatch.delenv("FIRESTORE_EMULATOR_HOST", raising=False)
+    monkeypatch.setenv("FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9199")
+    demo = MarketLensSettings(_env_file=None, firebase_enabled=True)
+
+    with pytest.raises(ValueError, match="Both Firebase emulators"):
+        create_marketlens_app(demo)
+    monkeypatch.setenv("FIRESTORE_EMULATOR_HOST", "example.org:8188")
+    with pytest.raises(ValueError, match="IPv4 loopback"):
+        create_marketlens_app(demo)
+
+    monkeypatch.setenv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8188")
+    with pytest.raises(ValueError, match="demo-marketlens- project"):
+        create_marketlens_app(
+            MarketLensSettings(_env_file=None, firebase_project_id="marketlens-dev")
+        )
+    with pytest.raises(ValueError, match="service account"):
+        create_marketlens_app(demo.model_copy(update={"firebase_credentials_path": "key.json"}))
+    assert create_marketlens_app(demo).state.firebase.settings is demo

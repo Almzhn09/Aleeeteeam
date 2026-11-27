@@ -19,8 +19,14 @@ from app.schemas.errors import ErrorResponse
 logger = logging.getLogger(__name__)
 
 
-def create_application(settings: Settings, routers: list[APIRouter], *, title: str) -> FastAPI:
-    runtime = FirebaseRuntime(settings)
+def create_application(
+    settings: Settings,
+    routers: list[APIRouter],
+    *,
+    title: str,
+    runtime: FirebaseRuntime | None = None,
+) -> FastAPI:
+    runtime = runtime if runtime is not None else FirebaseRuntime(settings)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):

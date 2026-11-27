@@ -6,6 +6,7 @@ from firebase_admin import auth
 
 from app.core.config import Settings
 from app.core.firebase import FirebaseRuntime
+from app.marketlens.runtime import marketlens_runtime
 from app.marketlens.settings import MarketLensSettings
 
 
@@ -18,10 +19,11 @@ def main() -> None:
     parser.add_argument("--project-confirm", required=True)
     parser.add_argument("--marketlens", action="store_true")
     args = parser.parse_args()
-    settings = MarketLensSettings() if args.marketlens else Settings()
-    if args.project_confirm != settings.firebase_project_id:
+    runtime = (
+        marketlens_runtime(MarketLensSettings()) if args.marketlens else FirebaseRuntime(Settings())
+    )
+    if args.project_confirm != runtime.settings.firebase_project_id:
         parser.error("Project confirmation does not match FIREBASE_PROJECT_ID")
-    runtime = FirebaseRuntime(settings)
     try:
         app = runtime.app()
         user = auth.get_user(args.uid, app=app)

@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import firebase_admin
 from firebase_admin import auth, credentials, firestore, storage
+from google.auth.credentials import Credentials
 from pydantic import ValidationError
 
 from app.core.config import Settings
@@ -16,8 +17,9 @@ logger = logging.getLogger(__name__)
 class FirebaseRuntime:
     """Lazy SDK initialization; missing cloud configuration never opens an auth bypass."""
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, *, credential: Credentials | None = None):
         self.settings = settings
+        self._credential = credential
         self._app: firebase_admin.App | None = None
         self._lock = threading.Lock()
 
@@ -27,7 +29,7 @@ class FirebaseRuntime:
         with self._lock:
             if self._app is None:
                 try:
-                    credential = (
+                    credential = self._credential or (
                         credentials.Certificate(str(self.settings.firebase_credentials_path))
                         if self.settings.firebase_credentials_path
                         else credentials.ApplicationDefault()

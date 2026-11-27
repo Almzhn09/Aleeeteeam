@@ -7,8 +7,8 @@ from pathlib import Path
 from pydantic import TypeAdapter, ValidationError
 
 from app.core.errors import AppError
-from app.core.firebase import FirebaseRuntime
 from app.marketlens.contracts import Listing
+from app.marketlens.runtime import marketlens_runtime
 from app.marketlens.settings import MarketLensSettings
 from app.marketlens.store import MarketStore
 
@@ -29,7 +29,7 @@ def main():
     settings = MarketLensSettings()
     if not settings.firebase_enabled:
         parser.error("Enable the dedicated MarketLens Firebase project before importing")
-    runtime = FirebaseRuntime(settings)
+    runtime = marketlens_runtime(settings)
     saved = 0
     try:
         store = MarketStore(runtime.db())
