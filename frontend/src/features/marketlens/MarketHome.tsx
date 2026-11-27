@@ -134,7 +134,8 @@ function CategoryTile({ slug, total, cover }: { slug: string; total: number; cov
   const image = cover?.startsWith('https://') && cover !== broken ? cover : undefined
   const title = marketCategories[slug] ?? slug.charAt(0).toUpperCase() + slug.slice(1)
   return <li>
-    <Link to={`/listings?${new URLSearchParams({ city, subcategory: slug })}`} className="ml-category">
+    <Link to={`/listings?${new URLSearchParams({ city, subcategory: slug })}`} className="ml-category"
+      aria-label={`${title} · ${marketNumber.format(total)} объявлений`}>
       <span className="ml-category-photo">{image
         ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(image)} />
         : <Layers size={28} aria-hidden="true" />}</span>

@@ -177,7 +177,7 @@ it('shows live counts, top deals and price distribution on the home page', async
   const kpis = screen.getByRole('region', { name: 'Ключевые показатели' })
   expect(await within(kpis).findByText('30')).toBeVisible()
   expect(within(kpis).getByText('Медиана (iPhone 13)')).toBeVisible()
-  const tabletTile = screen.getByRole('link', { name: /Планшеты 20/ })
+  const tabletTile = screen.getByRole('link', { name: 'Планшеты · 20 объявлений' })
   const tileUrl = new URL(tabletTile.getAttribute('href') ?? '', 'https://test.invalid')
   expect(tileUrl.searchParams.get('city')).toBe('Усть-Каменогорск')
   expect(tileUrl.searchParams.get('subcategory')).toBe('tablets')
