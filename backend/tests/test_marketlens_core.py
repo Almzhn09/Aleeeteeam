@@ -379,7 +379,12 @@ def test_openai_explanation_is_grounded_and_preserves_local_fallback():
 def test_radar_filters_city_and_reports_thin_groups_and_real_price_samples():
     store = Store()
     store.rows = [
-        listing(str(index), title="iPhone 13 128 GB", subcategory="phones", price=10000 * index)
+        listing(
+            str(index),
+            title=f"iPhone 13 {128 if index <= 3 else 256} GB",
+            subcategory="phones",
+            price=10000 * index,
+        )
         for index in range(1, 6)
     ] + [
         listing("11", title="iPhone 13 128 GB", subcategory="phones", city="Астана", price=100),
@@ -393,12 +398,17 @@ def test_radar_filters_city_and_reports_thin_groups_and_real_price_samples():
         url = "/api/v1/market/radar"
         assert client.get(url).status_code == 401
         result = client.get(url, params={"city": "алматы"}, headers=HEADERS).json()
-        assert [group["sampleSize"] for group in result["groups"]] == [5, 1]
+        groups = {group["key"]: group["sampleSize"] for group in result["groups"]}
+        assert sorted(groups.values(), reverse=True) == [5, 3, 2, 1, 1]
+        assert groups["electronics/phones:apple-iphone-13:any:KZT"] == 5
+        assert groups["electronics/phones:apple-iphone-13:128gb:any:KZT"] == 3
         assert result["sample"]["prices"] == [10000, 20000, 30000, 40000, 50000]
         assert result["sample"]["medianPrice"] == 30000
         assert sum(bin_["count"] for bin_ in result["sample"]["histogram"]) == 5
         thin = client.get(
-            url, params={"city": "Алматы", "group": result["groups"][1]["key"]}, headers=HEADERS
+            url,
+            params={"city": "Алматы", "group": "electronics/phones:apple-iphone-14:any:KZT"},
+            headers=HEADERS,
         ).json()
         assert thin["sample"]["prices"] == [35000]
         assert thin["sample"]["medianPrice"] is None

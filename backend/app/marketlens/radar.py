@@ -42,9 +42,13 @@ def radar(store: MarketStore, *, city: str, group: str) -> RadarPage:
         ):
             continue
         keys = group_keys(listing)
-        key = keys.get("variant") or keys.get("model")
-        if key and not any(signal.excludes_from_market for signal in text_signals(listing)):
-            cohorts[key].append((price, listing))
+        model = keys.get("model")
+        if not model or any(signal.excludes_from_market for signal in text_signals(listing)):
+            continue
+        cohorts[model].append((price, listing))
+        device_variant = keys.get("variant")
+        if device_variant:
+            cohorts[device_variant].append((price, listing))
 
     ordered = sorted(cohorts, key=lambda key: (-len(cohorts[key]), key))
     groups = [RadarGroup(key=key, sample_size=len(cohorts[key])) for key in ordered]
