@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import TypeAdapter
 
-from app.marketlens.analytics import ALGORITHM_VERSION, analyze, histogram
+from app.marketlens.analytics import ALGORITHM_VERSION, analyze, analyze_store, histogram
 from app.marketlens.analytics.__main__ import main as analyze_cli
 from app.marketlens.analytics.grouping import group_keys, product_key
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats
@@ -272,3 +272,26 @@ def test_cli_prints_both_result_kinds(tmp_path, monkeypatch, capsys):
         GROUP_13,
         "electronics/phones:all:any:KZT",
     }
+
+
+def test_analyze_store_saves_results_and_stats_through_public_methods():
+    class FakeStore:
+        def __init__(self):
+            self.results, self.stats = [], []
+
+        def scan_listings(self):
+            return iphone_market(dataset="real"), False
+
+        def save_analysis(self, result):
+            self.results.append(result)
+            return True
+
+        def save_stats(self, stats):
+            self.stats.append(stats)
+            return True
+
+    store = FakeStore()
+    summary = analyze_store(store, computed_at=COMPUTED)
+    assert summary == {"listings": 6, "scanLimited": False, "savedResults": 6, "savedStats": 2}
+    assert all(item.dataset == "real" for item in store.stats)
+    assert store.results[0].market_price == 330000
