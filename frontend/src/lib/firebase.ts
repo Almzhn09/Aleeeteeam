@@ -18,7 +18,7 @@ export const missingFirebaseConfig = Object.entries(config)
   .filter(([, value]) => !value?.trim()).map(([name]) => name)
 
 // Browser configuration is public. Admin credentials and Gemini keys never enter this module.
-if (marketLens && config.projectId && !/^(demo-)?marketlens-/.test(config.projectId)) {
+if (marketLens && config.projectId && config.projectId !== 'hackos20' && !/^(demo-)?marketlens-/.test(config.projectId)) {
   missingFirebaseConfig.push('VITE_MARKETLENS_FIREBASE_PROJECT_ID (выделенный проект)')
 }
 
