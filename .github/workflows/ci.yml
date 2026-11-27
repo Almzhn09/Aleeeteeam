@@ -70,8 +70,17 @@ jobs:
           docker build --target marketlens --tag marketlens-ci backend
           container=$(docker run --detach --rm --publish 127.0.0.1:18010:8000 marketlens-ci)
           trap 'docker stop "$container" >/dev/null 2>&1 || true' EXIT
-          curl --fail --retry 10 --retry-connrefused --retry-delay 1 \
-            http://127.0.0.1:18010/api/v1/health | jq -e '.service == "marketlens-api"'
+          for attempt in {1..30}; do
+            if health=$(curl --fail --silent --max-time 2 http://127.0.0.1:18010/api/v1/health) &&
+              jq -e '.service == "marketlens-api"' <<< "$health"; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker logs "$container"
+              exit 1
+            fi
+            sleep 1
+          done
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:18010/api/v1/market/listings)" = 401
       - if: always()
