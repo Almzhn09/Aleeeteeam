@@ -193,3 +193,17 @@ def test_non_html_response_is_a_source_failure():
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"error": "denied"}))
     with httpx.Client(transport=transport) as client, pytest.raises(OLXSourceError, match="HTML"):
         OLXParser(client, authorized=True).collect(CollectionRequest(category=CATEGORY))
+
+
+def test_explicit_negotiable_price_survives_inline_style():
+    body = synthetic_card(
+        "/d/obyavlenie/test-IDTest1.html",
+        "Синтетическая карточка",
+        "400&nbsp;000 тг.<style>.label { color: green; }</style><span>Договорная</span>",
+    ) + synthetic_card("/d/obyavlenie/test-IDTest2.html", "Фикстура обмена", "Обмен")
+    with httpx.Client(transport=httpx.MockTransport(lambda request: html(body))) as client:
+        priced, exchange = OLXParser(client, authorized=True).collect(
+            CollectionRequest(category=CATEGORY)
+        )
+    assert (priced.price, priced.currency) == (400000, "KZT")
+    assert exchange.price is exchange.currency is None
