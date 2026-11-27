@@ -47,6 +47,17 @@ npm run dev -- --mode marketlens --host 127.0.0.1 --port 5174
 Gemini необязателен. Сборщик OLX и его параметры описаны в
 [инструкции по сбору](backend/app/marketlens/parsers/README.md).
 
+Для обновления каталога одной командой из `backend/` после подтверждения
+разрешения OLX:
+
+```bash
+uv run --frozen python -m app.marketlens.update_olx --authorized --limit 30
+```
+
+Команда выводит JSON с числом записей, новых снимков, оценок и групп. Если
+источник недоступен или пуст, импорт не запускается. При сбое только на этапе
+аналитики её можно повторить через `refresh_analytics` без нового сбора.
+
 Для проверки без облачных ключей используйте [локальное окружение MarketLens](docs/MARKETLENS_LOCAL.md).
 
 ---

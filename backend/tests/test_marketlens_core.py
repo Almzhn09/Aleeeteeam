@@ -213,3 +213,36 @@ def test_emulator_requires_both_loopback_services_and_demo_project(monkeypatch):
     with pytest.raises(ValueError, match="service account"):
         create_marketlens_app(demo.model_copy(update={"firebase_credentials_path": "key.json"}))
     assert create_marketlens_app(demo).state.firebase.settings is demo
+
+
+@pytest.mark.parametrize("source_failure", ["unavailable", "empty"])
+def test_olx_update_does_not_open_firestore_on_collection_failure(
+    monkeypatch, capsys, source_failure
+):
+    from app.marketlens import update_olx
+
+    monkeypatch.setattr("sys.argv", ["update_olx", "--authorized"])
+    monkeypatch.setenv("MARKETLENS_FIREBASE_ENABLED", "true")
+
+    class Runtime:
+        def db(self):
+            pytest.fail("Firestore must remain unopened when collection failed")
+
+    def collect(self, request):
+        if source_failure == "unavailable":
+            raise update_olx.OLXSourceError("HTTP 403")
+        return []
+
+    monkeypatch.setattr(update_olx, "marketlens_runtime", lambda settings: Runtime())
+    monkeypatch.setattr(update_olx.OLXParser, "collect", collect)
+
+    with pytest.raises(SystemExit) as failure:
+        update_olx.main()
+    assert failure.value.code == 1
+    out = capsys.readouterr()
+    assert not out.out
+    assert (
+        "403" in out.err
+        if source_failure == "unavailable"
+        else "catalog was left unchanged" in out.err
+    )
