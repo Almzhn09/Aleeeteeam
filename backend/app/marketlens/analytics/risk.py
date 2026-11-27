@@ -75,7 +75,7 @@ def text_signals(listing: Listing) -> list[Signal]:
 
 def price_signals(listing: Listing, deviation: float | None) -> list[Signal]:
     if listing.price is None:
-        return [Signal("missing_price", 20, "Цена не указана, сравнение с рынком невозможно")]
+        return [Signal("missing_price", 0, "Цена не указана, сравнение с рынком невозможно")]
     if listing.price == 0:
         return [Signal("symbolic_price", 30, "Указана нулевая цена")]
     if deviation is None:

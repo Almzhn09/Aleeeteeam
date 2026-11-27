@@ -8,11 +8,11 @@ from datetime import datetime
 from statistics import median
 
 from app.marketlens.analytics import risk
-from app.marketlens.analytics.grouping import LEVEL_WEIGHT, LEVELS, group_keys
+from app.marketlens.analytics.grouping import LEVEL_WEIGHT, LEVELS, OVERVIEW_LEVELS, group_keys
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats, PriceBin
 
 ALGORITHM_VERSION = "v1"
-MIN_PEERS = 5
+MIN_PEERS = 4
 FULL_CONFIDENCE_PEERS = 10
 DEAL_FROM = -10.0
 MIN_DEAL_CONFIDENCE = 0.3
@@ -78,10 +78,11 @@ def analyze(listings: Iterable[Listing], *, computed_at: datetime) -> MarketAnal
         results.append(result)
         if result.comparable_group is not None:
             used.add((row.dataset, result.comparable_group))
-        # The category group always gets stats so the dashboard has an overview.
-        overview = (row.dataset, keys[row.id]["category"])
-        if overview in samples:
-            used.add(overview)
+        # Brand and category groups always get stats so the dashboard has an overview.
+        for level in OVERVIEW_LEVELS:
+            overview = (row.dataset, keys[row.id].get(level))
+            if overview in samples:
+                used.add(overview)
 
     stats = [
         _stats(dataset, group, meta[(dataset, group)], samples[(dataset, group)], computed_at)
@@ -112,7 +113,7 @@ def _evaluate(row, keys, samples, computed_at) -> AnalysisResult:
         confidence = _confidence(peers, level)
 
     signals = risk.price_signals(row, deviation) + text
-    if market is None and not signals:
+    if market is None and risk.score(signals) == 0:
         risk_score, risk_level = None, "unknown"
     else:
         risk_score = risk.score(signals)

@@ -123,14 +123,25 @@ def test_small_sample_leaves_estimates_empty():
         assert not result.is_deal
 
 
-def test_sparse_model_falls_back_to_broader_group_with_lower_confidence():
-    rows = iphone_market() + [phone("rare", "iPhone 15 Pro", 330000)]
-    result = by_id(analyze(rows, computed_at=COMPUTED))["olx:fixture-rare"]
-    assert result.comparable_group == "electronics/phones:apple:any:KZT"
-    assert result.sample_size == 6
-    peer = by_id(analyze(rows, computed_at=COMPUTED))["olx:fixture-i0"]
-    assert peer.comparable_group == GROUP_13
-    assert result.confidence < peer.confidence
+def test_other_models_are_never_used_as_market_reference():
+    # A first OLX page has many models with 1–3 cards; comparing them with other
+    # models would create false deals and false price risks.
+    rows = iphone_market() + [
+        phone("rare", "iPhone 15 Pro 256gb", 90000),
+        phone("redmi", "Redmi 13C", 60000),
+    ]
+    analysis = analyze(rows, computed_at=COMPUTED)
+    results = by_id(analysis)
+    for key in ("rare", "redmi"):
+        result = results[f"olx:fixture-{key}"]
+        assert result.market_price is None and result.comparable_group is None
+        assert result.risk_reasons == [] and result.risk_level == "unknown"
+        assert not result.is_deal
+    assert results["olx:fixture-i0"].comparable_group == GROUP_13
+    stats = {item.comparable_group: item for item in analysis.stats}
+    assert stats["electronics/phones:apple:any:KZT"].sample_size == 7
+    assert stats["electronics/phones:xiaomi:any:KZT"].sample_size == 1
+    assert stats["electronics/phones:all:any:KZT"].sample_size == 8
 
 
 def test_outlier_is_a_risk_signal_not_a_deal_and_does_not_move_market():
@@ -222,7 +233,11 @@ def test_recalculation_is_deterministic_and_keeps_latest_observation():
 def test_stats_aggregate_group_and_category_overview():
     analysis = analyze(iphone_market(), computed_at=COMPUTED)
     stats = {item.comparable_group: item for item in analysis.stats}
-    assert set(stats) == {GROUP_13, "electronics/phones:all:any:KZT"}
+    assert set(stats) == {
+        GROUP_13,
+        "electronics/phones:apple:any:KZT",
+        "electronics/phones:all:any:KZT",
+    }
     group = stats[GROUP_13]
     assert (group.dataset, group.category, group.currency) == ("fixture", "electronics", "KZT")
     assert group.sample_size == 6
@@ -270,6 +285,7 @@ def test_cli_prints_both_result_kinds(tmp_path, monkeypatch, capsys):
     assert output["results"][0]["computedAt"] == "2026-11-27T09:05:00Z"
     assert {item["comparableGroup"] for item in output["stats"]} == {
         GROUP_13,
+        "electronics/phones:apple:any:KZT",
         "electronics/phones:all:any:KZT",
     }
 
@@ -292,6 +308,6 @@ def test_analyze_store_saves_results_and_stats_through_public_methods():
 
     store = FakeStore()
     summary = analyze_store(store, computed_at=COMPUTED)
-    assert summary == {"listings": 6, "scanLimited": False, "savedResults": 6, "savedStats": 2}
+    assert summary == {"listings": 6, "scanLimited": False, "savedResults": 6, "savedStats": 3}
     assert all(item.dataset == "real" for item in store.stats)
     assert store.results[0].market_price == 330000
