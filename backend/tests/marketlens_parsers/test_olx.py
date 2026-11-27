@@ -307,3 +307,25 @@ def test_model_query_is_encoded_inside_the_selected_category():
             parser.collect(CollectionRequest(category="phones", query="---"))
         with pytest.raises(ValueError, match="pattern"):
             CollectionRequest(category="phones", query="../noutbuki")
+
+
+def test_city_collection_count_excludes_other_places_and_unknown_city(monkeypatch):
+    monkeypatch.setattr("app.marketlens.parsers.olx.sleep", lambda _: None)
+    urls = []
+
+    def respond(request):
+        urls.append(str(request.url))
+        town = "Алматы" if len(urls) == 1 else "Усть-Каменогорск"
+        body = synthetic_card("/d/obyavlenie/test-IDTest1.html", "Синтетический телефон", "100 тг.")
+        location = f'<p data-testid="location-date">{town} - Сегодня в 10:00</p>'
+        return html(body.replace("</div>", f"{location}</div>"))
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        [row] = OLXParser(client, authorized=True).collect(
+            CollectionRequest(category="phones", city="ust-kamenogorsk", pages=2, limit=1)
+        )
+    assert urls == [
+        f"{CATEGORY_URL}ust-kamenogorsk/",
+        f"{CATEGORY_URL}ust-kamenogorsk/?page=2",
+    ]
+    assert row.city == "Усть-Каменогорск"

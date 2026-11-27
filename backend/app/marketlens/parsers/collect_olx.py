@@ -6,7 +6,7 @@ import httpx
 from pydantic import TypeAdapter, ValidationError
 
 from app.marketlens.contracts import CollectionRequest, Listing
-from app.marketlens.parsers.olx import OLX_SECTIONS, OLXParser, OLXSourceError
+from app.marketlens.parsers.olx import CITY_LABELS, OLX_SECTIONS, OLXParser, OLXSourceError
 
 
 def main():
@@ -20,15 +20,22 @@ def main():
     parser.add_argument(
         "--category", choices=OLX_SECTIONS, default="phones", help="OLX category to collect"
     )
-    parser.add_argument("--pages", type=int, default=1, help="Maximum OLX pages (1–3)")
+    parser.add_argument(
+        "--pages", type=int, default=1, help="Maximum OLX pages (3 nationally, 12 in a city)"
+    )
+    parser.add_argument("--city", choices=CITY_LABELS, help="OLX city slug")
     parser.add_argument("--query", help="Optional model name within the selected category")
     args = parser.parse_args()
     try:
         request = CollectionRequest(
-            category=args.category, limit=args.limit, pages=args.pages, query=args.query
+            category=args.category,
+            limit=args.limit,
+            pages=args.pages,
+            query=args.query,
+            city=args.city,
         )
     except ValidationError:
-        parser.error("Use --limit 1–1000, --pages 1–3 and a model name with letters or numbers.")
+        parser.error("Use --limit 1–1000, --pages 1–3 (1–12 with --city) and a valid model name.")
     with httpx.Client() as client:
         try:
             listings = OLXParser(client, authorized=args.authorized).collect(request)

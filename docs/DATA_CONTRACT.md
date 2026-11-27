@@ -30,7 +30,9 @@
 ```
 
 Адаптер `ListingParser` объявляет `source` и `collect(request)`, возвращающий
-Iterable[Listing]. `CollectionRequest` передаёт category, limit, pages (от 1 до 3, по умолчанию 1) и необязательный query. Парсер
+Iterable[Listing]. `CollectionRequest` передаёт category, limit, pages
+(по умолчанию 1), необязательные query и city. Для общей выдачи лимит
+составляет 3 страницы, для city=ust-kamenogorsk — 12 страниц. Парсер
 возвращает только проверяемые нормализованные записи, ограничивает выдачу,
 дедуплицирует по ID и сообщает о недоступности источника ошибкой. Оригинальная
 ссылка HTTPS принадлежит указанному источнику. sellerId сохраняется только

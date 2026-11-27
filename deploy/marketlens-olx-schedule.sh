@@ -9,27 +9,26 @@ fi
 
 project=hackos20
 region=us-central1
-job=marketlens-olx
-schedule=marketlens-olx-daily
+job=marketlens-olx-oskemen
+schedule=marketlens-olx-oskemen-daily
 runtime_account="marketlens-api@$project.iam.gserviceaccount.com"
 scheduler_account="marketlens-scheduler@$project.iam.gserviceaccount.com"
 cloud=(gcloud --project="$project" --quiet)
 
-# Use the immutable image of the revision the operator has already released.
-revision=$("${cloud[@]}" run services describe marketlens-api --region="$region" \
-  --format='value(status.latestReadyRevisionName)')
-image=$("${cloud[@]}" run revisions describe "$revision" --region="$region" \
-  --format='value(status.imageDigest)')
-if [[ "$image" != "$region-docker.pkg.dev/$project/marketlens/api@sha256:"* ]]; then
-  echo "Could not resolve the immutable image of the deployed MarketLens API." >&2
+if ! git diff --quiet HEAD || [[ -n "$(git status --porcelain --untracked-files=normal backend)" ]]; then
+  echo "Use a clean release checkout to build the collection job." >&2
   exit 1
 fi
+sha=$(git rev-parse HEAD)
+image="$region-docker.pkg.dev/$project/marketlens/api:$sha"
+"${cloud[@]}" builds submit --config=deploy/marketlens-cloudbuild.yaml \
+  --substitutions="_IMAGE=$image"
 
 "${cloud[@]}" run jobs deploy "$job" --region="$region" --image="$image" \
   --service-account="$runtime_account" --tasks=1 --parallelism=1 \
-  --max-retries=0 --task-timeout=180s \
+  --max-retries=0 --task-timeout=600s \
   --command=/app/.venv/bin/python \
-  --args='-m,app.marketlens.update_olx,--authorized,--query=iphone 15,--pages=2,--limit=60' \
+  --args='-m,app.marketlens.update_olx,--authorized,--city=ust-kamenogorsk,--category=phones,--category=laptops,--pages=12,--limit=400' \
   --set-env-vars="MARKETLENS_FIREBASE_ENABLED=true,MARKETLENS_FIREBASE_PROJECT_ID=$project"
 
 if ! "${cloud[@]}" run jobs execute "$job" --region="$region" --wait; then
@@ -60,3 +59,10 @@ fi
 
 "${cloud[@]}" scheduler jobs describe "$schedule" --location="$region" \
   --format='table(name,state,schedule,timeZone)'
+
+
+# If the earlier model-only schedule exists, stop its future invocations.
+if "${cloud[@]}" scheduler jobs describe marketlens-olx-daily --location="$region" \
+    --format='value(state)' 2>/dev/null | grep -qx ENABLED; then
+  "${cloud[@]}" scheduler jobs pause marketlens-olx-daily --location="$region"
+fi

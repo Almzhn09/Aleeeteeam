@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from app.core.errors import AppError
 from app.marketlens.contracts import CollectionRequest
 from app.marketlens.import_listings import import_rows, validate_import_rows
-from app.marketlens.parsers.olx import OLX_SECTIONS, OLXParser, OLXSourceError
+from app.marketlens.parsers.olx import CITY_LABELS, OLX_SECTIONS, OLXParser, OLXSourceError
 from app.marketlens.refresh_analytics import refresh_analytics
 from app.marketlens.runtime import marketlens_runtime
 from app.marketlens.settings import MarketLensSettings
@@ -22,19 +22,32 @@ def main() -> None:
     parser.add_argument("--authorized", action="store_true", help="Confirm OLX permits collection")
     parser.add_argument("--limit", type=int, default=30, help="Maximum unique listings")
     parser.add_argument(
-        "--category", choices=OLX_SECTIONS, default="phones", help="OLX category to collect"
+        "--category", choices=OLX_SECTIONS, action="append", help="OLX category (repeatable)"
     )
-    parser.add_argument("--pages", type=int, default=1, help="Maximum OLX pages (1–3)")
+    parser.add_argument(
+        "--pages", type=int, default=1, help="Maximum OLX pages (3 nationally, 12 in a city)"
+    )
+    parser.add_argument("--city", choices=CITY_LABELS, help="OLX city slug")
     parser.add_argument("--query", help="Optional model name within the selected category")
     args = parser.parse_args()
     if not args.authorized:
         parser.error("--authorized is required to collect from OLX")
+    categories = list(dict.fromkeys(args.category or ["phones"]))
+    if args.limit * len(categories) > 1000:
+        parser.error("--limit per category must keep the total at or below 1000")
     try:
-        request = CollectionRequest(
-            category=args.category, limit=args.limit, pages=args.pages, query=args.query
-        )
+        requests = [
+            CollectionRequest(
+                category=category,
+                limit=args.limit,
+                pages=args.pages,
+                query=args.query,
+                city=args.city,
+            )
+            for category in categories
+        ]
     except ValidationError:
-        parser.error("Use --limit 1–1000, --pages 1–3 and a model name with letters or numbers.")
+        parser.error("Use --limit 1–1000, --pages 1–3 (1–12 with --city) and a valid model name.")
 
     settings = MarketLensSettings()
     if not settings.firebase_enabled:
@@ -42,9 +55,19 @@ def main() -> None:
     runtime = marketlens_runtime(settings)
     try:
         with httpx.Client() as client:
-            rows = OLXParser(client, authorized=True).collect(request)
-        if not rows:
-            parser.exit(1, "OLX returned no listings. The catalog was left unchanged.\n")
+            collector = OLXParser(client, authorized=True)
+            unique = {}
+            for request in requests:
+                collected = collector.collect(request)
+                if not collected:
+                    parser.exit(
+                        1,
+                        f"OLX returned no listings for {request.category}. "
+                        "The catalog was left unchanged.\n",
+                    )
+                for row in collected:
+                    unique.setdefault(row.id, row)
+            rows = list(unique.values())
         validate_import_rows(rows)
     except (OLXSourceError, ValueError) as error:
         parser.exit(1, f"OLX collection failed: {error}\n")

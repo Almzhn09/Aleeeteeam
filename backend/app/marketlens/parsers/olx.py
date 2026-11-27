@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from html.parser import HTMLParser
+from time import sleep
 from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 import httpx
@@ -18,6 +19,8 @@ OLX_SECTIONS = {
     "phones": CATEGORY_URL,
     "laptops": "https://www.olx.kz/elektronika/noutbuki-i-aksesuary/noutbuki/",
 }
+
+CITY_LABELS = {"ust-kamenogorsk": "Усть-Каменогорск"}
 
 USER_AGENT = "MarketLens/1.0"
 DETAIL_PATH = re.compile(r"/d/(?:obyavlenie|ogoloshennya)/[^/]+-ID([A-Za-z0-9]+)\.html")
@@ -214,7 +217,7 @@ def _normalize(
 
 
 class OLXParser:
-    """Up to three pages of one category per collection, with a new observation time on each run."""
+    """Collect a bounded number of national or city pages for one category."""
 
     source: Source = "olx"
 
@@ -229,6 +232,8 @@ class OLXParser:
         if not self._authorized:
             raise OLXSourceError("OLX: требуется подтверждённое разрешение на сбор категории")
         url = OLX_SECTIONS[section]
+        if request.city:
+            url = f"{url}{request.city}/"
         if request.query:
             slug = "-".join(request.query.split()).strip("-")
             if not any(character.isalnum() for character in slug):
@@ -237,10 +242,14 @@ class OLXParser:
         scraped_at = datetime.now(UTC)
         unique: dict[str, Listing] = {}
         for page in range(1, request.pages + 1):
+            if request.city and page > 1:
+                sleep(1)
             rows = self._collect_page(url, section, page, scraped_at)
             if not rows:
                 break
             for row in rows:
+                if request.city and row.city != CITY_LABELS[request.city]:
+                    continue
                 unique.setdefault(row.id, row)
                 if len(unique) == request.limit:
                     return list(unique.values())

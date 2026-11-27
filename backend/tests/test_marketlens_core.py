@@ -262,13 +262,16 @@ def test_emulator_requires_both_loopback_services_and_demo_project(monkeypatch):
     assert create_marketlens_app(demo).state.firebase.settings is demo
 
 
-@pytest.mark.parametrize("source_failure", ["unavailable", "empty"])
+@pytest.mark.parametrize("source_failure", ["unavailable", "empty", "second_category"])
 def test_olx_update_does_not_open_firestore_on_collection_failure(
     monkeypatch, capsys, source_failure
 ):
     from app.marketlens import update_olx
 
-    monkeypatch.setattr("sys.argv", ["update_olx", "--authorized"])
+    argv = ["update_olx", "--authorized"]
+    if source_failure == "second_category":
+        argv += ["--category", "phones", "--category", "laptops"]
+    monkeypatch.setattr("sys.argv", argv)
     monkeypatch.setenv("MARKETLENS_FIREBASE_ENABLED", "true")
 
     class Runtime:
@@ -276,9 +279,11 @@ def test_olx_update_does_not_open_firestore_on_collection_failure(
             pytest.fail("Firestore must remain unopened when collection failed")
 
     def collect(self, request):
-        if source_failure == "unavailable":
-            raise update_olx.OLXSourceError("HTTP 403")
-        return []
+        if source_failure == "empty":
+            return []
+        if source_failure == "second_category" and request.category == "phones":
+            return [listing()]
+        raise update_olx.OLXSourceError("HTTP 403")
 
     monkeypatch.setattr(update_olx, "marketlens_runtime", lambda settings: Runtime())
     monkeypatch.setattr(update_olx.OLXParser, "collect", collect)
@@ -289,9 +294,7 @@ def test_olx_update_does_not_open_firestore_on_collection_failure(
     out = capsys.readouterr()
     assert not out.out
     assert (
-        "403" in out.err
-        if source_failure == "unavailable"
-        else "catalog was left unchanged" in out.err
+        "403" in out.err if source_failure != "empty" else "catalog was left unchanged" in out.err
     )
 
 
