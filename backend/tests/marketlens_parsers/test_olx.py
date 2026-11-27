@@ -207,3 +207,37 @@ def test_explicit_negotiable_price_survives_inline_style():
         )
     assert (priced.price, priced.currency) == (400000, "KZT")
     assert exchange.price is exchange.currency is None
+
+
+def test_city_and_original_photos_are_joined_without_guessing():
+    url = "/d/obyavlenie/test-IDTest1.html"
+    card = synthetic_card(url, "Учебный телефон", "85 000 тг.").replace(
+        '<p data-testid="ad-price">',
+        '<p data-testid="location-date">Астана, Сарыаркинский район - Сегодня в 10:00</p>'
+        '<p data-testid="ad-price">',
+    )
+    valid = "https://frankfurt.apollo.olxcdn.com:443/v1/files/demo/image"
+    category = (
+        card
+        + f"""
+    <script type="application/ld+json">{{
+      "offers": {{"offers": [
+        {{"url": "https://www.olx.kz{url}", "image": [
+          "{valid}", "{valid}", "http://frankfurt.apollo.olxcdn.com/v1/files/demo/image",
+          "https://frankfurt.apollo.olxcdn.com.example/v1/files/demo/image"
+        ]}},
+        {{"url": "/d/obyavlenie/unrelated-IDTest2.html", "image": [
+          "https://frankfurt.apollo.olxcdn.com/v1/files/unrelated/image"
+        ]}}
+      ]}}
+    }}</script>
+    """
+    )
+    with httpx.Client(transport=httpx.MockTransport(lambda request: html(category))) as client:
+        listing = OLXParser(client, authorized=True).collect(CollectionRequest(category=CATEGORY))[
+            0
+        ]
+
+    assert listing.city == "Астана"
+    assert [str(image) for image in listing.images] == [valid.replace(":443", "")]
+    assert listing.published_at is None

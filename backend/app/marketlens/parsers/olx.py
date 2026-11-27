@@ -1,5 +1,6 @@
 """Collect public OLX.kz mobile phone cards from an authorized category page."""
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -30,6 +31,7 @@ class _Card:
     hrefs: list[str] = field(default_factory=list)
     title: list[str] = field(default_factory=list)
     price: list[str] = field(default_factory=list)
+    location: list[str] = field(default_factory=list)
 
 
 class _Cards(HTMLParser):
@@ -37,11 +39,15 @@ class _Cards(HTMLParser):
         super().__init__()
         self.cards: list[_Card] = []
         self.empty = False
+        self.embedded: list[str] = []
+        self._structured_data = False
         self._card: _Card | None = None
         self._tags: list[tuple[str, str | None]] = []
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag == "script":
+            self._structured_data = attrs.get("type") == "application/ld+json"
         if attrs.get("data-testid") == "listing-empty-state":
             self.empty = True
         if tag == "div" and attrs.get("data-cy") == "l-card":
@@ -58,6 +64,8 @@ class _Cards(HTMLParser):
             capture = "title"
         if attrs.get("data-testid") == "ad-price":
             capture = "price"
+        if attrs.get("data-testid") == "location-date":
+            capture = "location"
         if tag in {"style", "script"}:
             capture = None
         self._tags.append((tag, capture))
@@ -68,6 +76,8 @@ class _Cards(HTMLParser):
             self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
+        if tag == "script":
+            self._structured_data = False
         for index in range(len(self._tags) - 1, -1, -1):
             if self._tags[index][0] == tag:
                 del self._tags[index:]
@@ -76,12 +86,17 @@ class _Cards(HTMLParser):
                 break
 
     def handle_data(self, data):
+        if self._structured_data:
+            self.embedded.append(data)
+            return
         if self._card is not None and self._tags:
             capture = self._tags[-1][1]
             if capture == "title":
                 self._card.title.append(data)
             if capture == "price":
                 self._card.price.append(data)
+            if capture == "location":
+                self._card.location.append(data)
 
     def _finish(self):
         if self._card is not None:
@@ -103,7 +118,55 @@ def _original(href: str) -> tuple[str, str] | None:
     return None
 
 
-def _normalize(card: _Card, scraped_at: datetime) -> Listing | None:
+def _offer_images(documents: list[str]) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for document in documents:
+        try:
+            page = json.loads(document)
+        except (ValueError, RecursionError):
+            continue
+        aggregate = page.get("offers") if isinstance(page, dict) else None
+        offers = aggregate.get("offers") if isinstance(aggregate, dict) else None
+        if not isinstance(offers, list):
+            continue
+        for offer in offers:
+            if not isinstance(offer, dict) or not isinstance(offer.get("url"), str):
+                continue
+            original = _original(offer["url"])
+            images = offer.get("image")
+            if original is None or not isinstance(images, list):
+                continue
+            urls = list(dict.fromkeys(url for url in images if _is_olx_photo(url)))[:20]
+            if urls:
+                result.setdefault(original[0], urls)
+    return result
+
+
+def _is_olx_photo(value) -> bool:
+    if not isinstance(value, str) or len(value) > 2083:
+        return False
+    try:
+        url = urlsplit(value)
+        host = url.hostname or ""
+        return (
+            url.scheme == "https"
+            and host.endswith(".olxcdn.com")
+            and url.port in {None, 443}
+            and url.username is None
+            and url.password is None
+            and url.path.startswith("/v1/files/")
+        )
+    except ValueError:
+        return False
+
+
+def _city(location: list[str]) -> str | None:
+    place, separator, _ = " ".join("".join(location).split()).rpartition(" - ")
+    value = place.split(",", 1)[0].strip()
+    return value if separator and 1 <= len(value) <= 120 else None
+
+
+def _normalize(card: _Card, scraped_at: datetime, images: dict[str, list[str]]) -> Listing | None:
     title = " ".join("".join(card.title).split())
     if not 1 <= len(title) <= 500:
         return None
@@ -135,6 +198,8 @@ def _normalize(card: _Card, scraped_at: datetime) -> Listing | None:
             subcategory="phones",
             price=price,
             currency="KZT" if price is not None else None,
+            city=_city(card.location),
+            images=images.get(external_id, []),
             scraped_at=scraped_at,
         )
     except ValidationError:
@@ -174,10 +239,11 @@ class OLXParser:
         cards = _Cards()
         cards.feed(response.text)
         cards.close()
+        images = _offer_images(cards.embedded)
         scraped_at = datetime.now(UTC)
         unique: dict[str, Listing] = {}
         for card in cards.cards:
-            listing = _normalize(card, scraped_at)
+            listing = _normalize(card, scraped_at, images)
             if listing is not None:
                 unique.setdefault(listing.id, listing)
                 if len(unique) == request.limit:
