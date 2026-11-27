@@ -27,5 +27,6 @@
   uv run --frozen python -m app.marketlens.analytics listings.json > analysis.json
   ```
 
-  и посмотри, сколько `results` имеют `marketPrice` — по этому подстроим
+  В stderr будет сводка (`withMarketPrice`, `deals`, `riskMediumOrHigh`) — пришли её,
+  по ней подстроим
   распознавание моделей.

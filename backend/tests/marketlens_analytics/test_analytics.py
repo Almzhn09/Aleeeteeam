@@ -64,6 +64,14 @@ def by_id(analysis):
         ("Poco X6 Pro 5G 12/512", "xiaomi-pocox6-pro", "512gb"),
         ("Redmi 13C 8/256", "xiaomi-redmi13c", "256gb"),
         ("iPhone 14 Pro 2 sim", "apple-iphone-14-pro", None),
+        ("Tecno Spark 20 Pro 8/256", "tecno-spark20-pro", "256gb"),
+        ("Infinix Hot 40i 128гб", "infinix-hot40i", "128gb"),
+        ("Honor X8b 8/128", "honor-x8b", "128gb"),
+        ("Huawei P30 Lite", "huawei-p30-lite", None),
+        ("Realme C55", "realme-c55", None),
+        ("OnePlus 12 Pro", "oneplus-12-pro", None),
+        ("Vivo Y36 128 gb", "vivo-y36", "128gb"),
+        ("Tecno 128 gb синий", None, "128gb"),
         ("Телефон в хорошем состоянии", None, None),
     ],
 )
@@ -74,7 +82,7 @@ def test_product_key_reads_model_and_storage_from_title(title, model, storage):
 
 def test_product_key_falls_back_to_brand():
     assert product_key("Самсунг Галакси А54").brand == "samsung"
-    assert product_key("Huawei P30").brand == "huawei"
+    assert product_key("Huawei смартфон").brand == "huawei"
     assert product_key("Кнопочный телефон").brand is None
 
 
@@ -279,7 +287,15 @@ def test_cli_prints_both_result_kinds(tmp_path, monkeypatch, capsys):
         sys, "argv", ["analytics", str(source), "--computed-at", "2026-11-27T09:05:00Z"]
     )
     analyze_cli()
-    output = json.loads(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    output = json.loads(captured.out)
+    assert json.loads(captured.err) == {
+        "listings": 6,
+        "withMarketPrice": 6,
+        "deals": 0,
+        "riskMediumOrHigh": 0,
+        "groups": 3,
+    }
     assert len(output["results"]) == 6
     assert output["results"][0]["algorithmVersion"] == ALGORITHM_VERSION
     assert output["results"][0]["computedAt"] == "2026-11-27T09:05:00Z"

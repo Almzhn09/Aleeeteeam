@@ -35,13 +35,18 @@ uv run --frozen python -m app.marketlens.analytics listings.json \
 ```
 
 `listings.json` — экспорт `collect_olx`. Вывод: `{"results": [AnalysisResult],
-"stats": [MarketStats]}` в camelCase. Firestore не используется.
+"stats": [MarketStats]}` в camelCase. В stderr печатается сводка: сколько
+карточек получили оценку рынка, выгодных, с риском medium/high и групп.
+Firestore не используется.
 
 ## Группы сравнения
 
 Группа всегда разделяет `dataset`, категорию/подкатегорию, состояние
 (`condition` или `any`) и валюту. Внутри категории модель определяется по
 заголовку (латиница и кириллица: «айфон», «самсунг», «редми ноут», «гб»).
+Отдельные правила — для iPhone, Samsung Galaxy, Xiaomi/Redmi/Poco и Pixel; для
+Huawei, Honor, Realme, OnePlus, Oppo, Vivo, Tecno, Infinix, Nokia и Motorola —
+общее «бренд [серия] код [pro|lite|…]», например `tecno-spark20-pro`.
 
 | Уровень | Пример `comparableGroup` | Роль |
 |---|---|---|
@@ -108,7 +113,7 @@ uv run --frozen pytest -q tests/marketlens_analytics
 uv run --frozen ruff check app/marketlens/analytics tests/marketlens_analytics
 ```
 
-32 теста на фиксированных `fixture-` Listing: определение модели, формула,
+40 тестов на фиксированных `fixture-` Listing: определение модели, формула,
 малая выборка, запрет сравнения с другими моделями, выброс, копия с предоплатой,
 отсутствующая и нулевая цена, смешанные валюты, разделение real/fixture,
 повторный расчёт с перемешиванием и дублями, агрегаты, гистограмма, контракт,
