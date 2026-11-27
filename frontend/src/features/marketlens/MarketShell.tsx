@@ -20,10 +20,7 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); onSkip() }}>К содержимому</a>
     <header className="ml-header">
       <div className="ml-container ml-header-row">
-        <Link to="/" className="ml-logo">
-          <span className="ml-logo-mark" aria-hidden="true"><TrendingUp size={20} strokeWidth={2.6} /></span>
-          MarketLens
-        </Link>
+        <MarketLogo />
         <nav aria-label="Основная навигация" className="ml-nav">
           {links.map(({ to, label }) => <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) => `ml-nav-link${isActive ? ' active' : ''}`}>{label}</NavLink>)}
@@ -38,4 +35,11 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
     </header>
     <main id="main-content" className="ml-container ml-main" tabIndex={-1}>{children}</main>
   </div>
+}
+
+export function MarketLogo() {
+  return <Link to="/" className="ml-logo">
+    <span className="ml-logo-mark" aria-hidden="true"><TrendingUp size={20} strokeWidth={2.6} /></span>
+    MarketLens
+  </Link>
 }

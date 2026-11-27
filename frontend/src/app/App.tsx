@@ -6,7 +6,7 @@ import { ConfigurationNotice, useAuth } from '@/features/auth/AuthProvider'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { EmptyState, LoadingState } from '@/components/WorkspaceUI'
 import { RouteBoundary } from './RouteBoundary'
-import { MarketShell } from '@/features/marketlens/MarketShell'
+import { MarketLogo, MarketShell } from '@/features/marketlens/MarketShell'
 
 const MarketHome = lazy(() => import('@/features/marketlens/MarketHome').then(module => ({ default: module.MarketHome })))
 const MarketCatalog = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketCatalog })))
@@ -55,7 +55,8 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
     }
     previousPath.current = pathname
   }, [pathname, status])
-  if (status !== 'authenticated') return <div className="min-h-screen bg-muted px-4 py-16">
+  if (status !== 'authenticated') return <div className={marketLens ? 'ml-shell ml-auth' : 'min-h-screen bg-muted px-4 py-16'}>
+    {marketLens && <MarketLogo />}
     {status === 'unavailable' ? <ConfigurationNotice marketLens={marketLens} />
       : status === 'loading' ? <p role="status" className="text-center">Проверяем доступ…</p>
       : status === 'denied' ? <section className="mx-auto max-w-lg rounded-xl bg-background p-8">

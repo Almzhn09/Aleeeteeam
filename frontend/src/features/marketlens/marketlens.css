@@ -163,3 +163,10 @@
 }
 .ml-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Sign-in, access and configuration screens */
+.ml-auth { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 56px 16px; }
+.ml-auth > section { width: 100%; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 10px 34px rgba(17, 40, 26, 0.08); }
+.ml-auth input { border-radius: 12px; border-color: #dfe7e2; }
+.ml-auth input:focus { outline: none; border-color: var(--ml-green); box-shadow: 0 0 0 3px #bbf7d0; }
+.ml-auth button { border-radius: 12px; min-height: 48px; font-weight: 650; }
