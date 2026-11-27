@@ -7,21 +7,19 @@ from datetime import UTC, datetime
 from google.api_core.exceptions import GoogleAPIError
 
 from app.core.errors import AppError
-from app.marketlens.analytics import analyze
+from app.marketlens.analytics import analyze_store
 from app.marketlens.runtime import marketlens_runtime
 from app.marketlens.settings import MarketLensSettings
 from app.marketlens.store import MarketStore
 
 
 def refresh_analytics(store: MarketStore) -> dict[str, int | bool]:
-    computed_at = datetime.now(UTC)
-    listings, scan_limited = store.scan_listings()
-    output = analyze(listings, computed_at=computed_at)
+    output = analyze_store(store, computed_at=datetime.now(UTC))
     return {
-        "scannedCount": len(listings),
-        "scanLimited": scan_limited,
-        "savedResults": sum(store.save_analysis(result) for result in output.results),
-        "savedGroups": sum(store.save_stats(stats) for stats in output.stats),
+        "scannedCount": output["listings"],
+        "scanLimited": output["scanLimited"],
+        "savedResults": output["savedResults"],
+        "savedGroups": output["savedStats"],
     }
 
 
