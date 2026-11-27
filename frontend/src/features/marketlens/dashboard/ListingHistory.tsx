@@ -1,10 +1,15 @@
+import { useState } from 'react'
 import { ErrorState, LoadingState } from '@/components/WorkspaceUI'
+import { Button } from '@/components/ui/button'
 import type { PriceHistory } from '@/lib/marketlens'
 import { useApiQuery } from '@/lib/useApiQuery'
 import { formatPrice, marketTime } from './format'
 
 export function ListingHistory({ path }: { path: string }) {
-  const { data, error, loading, refresh } = useApiQuery<PriceHistory>(`${path}/history`)
+  const [expanded, setExpanded] = useState(false)
+  const { data, error, loading, refresh } = useApiQuery<PriceHistory>(
+    `${path}/history${expanded ? '?limit=100' : ''}`,
+  )
 
   return <section className="panel content-pad space-y-3" aria-labelledby="listing-history">
     <h2 id="listing-history" className="text-lg font-semibold">История цен</h2>
@@ -19,6 +24,9 @@ export function ListingHistory({ path }: { path: string }) {
         </li>)}
       </ol>
       {data.truncated && <p className="text-sm text-muted-foreground">Показаны последние {data.items.length} снимков.</p>}
+      {data.truncated && !expanded && <Button type="button" variant="outline" onClick={() => setExpanded(true)}>
+        Показать больше снимков
+      </Button>}
     </>)}
   </section>
 }

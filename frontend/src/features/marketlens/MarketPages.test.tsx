@@ -19,6 +19,10 @@ const row: ListingItem = {
 describe('MarketLens workspace', () => {
   it('opens a filtered catalog, follows an item and requests its local explanation', async () => {
     const api = vi.fn().mockImplementation(async (path: string) => {
+      if (path.endsWith('/history?limit=100')) return {
+        items: [{ scrapedAt: '2026-11-25T09:00:00Z', price: 80000, currency: 'KZT' }],
+        truncated: false,
+      }
       if (path.endsWith('/history')) return {
         items: [
           { scrapedAt: '2026-11-27T09:00:00Z', price: 85000, currency: 'KZT' },
@@ -58,6 +62,8 @@ describe('MarketLens workspace', () => {
     expect(await within(history).findByText(/85\s000 KZT/)).toBeVisible()
     expect(within(history).getByText('Неизвестна')).toBeVisible()
     expect(within(history).getByText('Показаны последние 2 снимков.')).toBeVisible()
+    fireEvent.click(within(history).getByRole('button', { name: 'Показать больше снимков' }))
+    expect(await within(history).findByText(/80\s000 KZT/)).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Получить пояснение' }))
     expect(await screen.findByText('Локальное пояснение')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'К каталогу' })).toHaveAttribute('href', '/listings?city=%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B')
