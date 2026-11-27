@@ -116,3 +116,14 @@ def test_refresh_publishes_comparison_and_histogram_for_real_catalog(db):
     groups, truncated = store.get_stats()
     assert not truncated
     assert all(sum(bin.count for bin in group.histogram) == group.sample_size for group in groups)
+
+
+def test_explanation_budget_is_isolated_per_user_and_day(db):
+    store = MarketStore(db)
+    day = datetime(2026, 11, 27, tzinfo=UTC).date()
+    limits = {"per_user": 1, "global_limit": 2}
+    assert store.reserve_explanation("analyst/one", day, **limits)
+    assert not store.reserve_explanation("analyst/one", day, **limits)
+    assert store.reserve_explanation("analyst-two", day, **limits)
+    assert not store.reserve_explanation("analyst-three", day, **limits)
+    assert store.reserve_explanation("analyst/one", day + timedelta(days=1), **limits)

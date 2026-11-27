@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Path, Query, Request
@@ -169,4 +170,17 @@ def explanation(
     store: Store,
     request: Request,
 ) -> ExplanationResponse:
-    return explain(listing_item(store, listing_id), request.app.state.settings)
+    settings = request.app.state.settings
+
+    def reserve() -> bool:
+        try:
+            return store.reserve_explanation(
+                user.uid,
+                datetime.now(UTC).date(),
+                per_user=settings.ai_daily_user_limit,
+                global_limit=settings.ai_daily_global_limit,
+            )
+        except GoogleAPIError:
+            return False
+
+    return explain(listing_item(store, listing_id), settings, reserve=reserve)

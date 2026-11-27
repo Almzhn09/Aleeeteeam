@@ -215,6 +215,13 @@ def test_gemini_uses_only_metrics_and_falls_back_on_timeout():
     def timeout(request):
         raise httpx.ReadTimeout("Time limit", request=request)
 
+    def unexpected_provider(request):
+        pytest.fail("Quota rejection must skip the Gemini request")
+
+    limited = explain(
+        item, settings, reserve=lambda: False, transport=httpx.MockTransport(unexpected_provider)
+    )
+    assert limited.provider == "local"
     assert explain(item, settings, transport=httpx.MockTransport(success)).provider == "gemini"
     assert explain(item, settings, transport=httpx.MockTransport(timeout)).provider == "local"
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"candidates": []}))

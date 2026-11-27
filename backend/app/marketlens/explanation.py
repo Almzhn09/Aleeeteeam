@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from typing import Annotated, Literal
 
 import httpx
@@ -33,6 +34,7 @@ def explain(
     settings: MarketLensSettings,
     *,
     transport: httpx.BaseTransport | None = None,
+    reserve: Callable[[], bool] | None = None,
 ) -> ExplanationResponse:
     result = item.analysis
     fallback = ExplanationResponse(
@@ -54,6 +56,7 @@ def explain(
         result is None
         or not settings.gemini_model
         or not settings.gemini_api_key.get_secret_value()
+        or (reserve is not None and not reserve())
     ):
         return fallback
 

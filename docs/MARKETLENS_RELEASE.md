@@ -38,7 +38,11 @@ gcloud run deploy marketlens-api --project "$PROJECT_ID" --region "$REGION" \
 аналитики и объяснений требуют Firebase Bearer-токен и роль. Заполните
 `VITE_MARKETLENS_API_BASE_URL` HTTPS-адресом этого сервиса. Поля Gemini
 могут оставаться пустыми. Если подключаете Gemini, передавайте ключ только
-серверу через Secret Manager.
+серверу через Secret Manager. Перед каждым вызовом Gemini сервер резервирует
+запрос на сутки по UTC. Лимиты по умолчанию — 20 запросов на пользователя и
+100 на проект. Переменные `MARKETLENS_AI_DAILY_USER_LIMIT` и
+`MARKETLENS_AI_DAILY_GLOBAL_LIMIT` меняют эти значения. При исчерпании квоты
+или недоступности счётчиков доступно локальное пояснение.
 
 ## Собрать и развернуть Hosting и Firestore
 

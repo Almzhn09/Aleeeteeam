@@ -1,4 +1,4 @@
-from datetime import UTC
+from datetime import UTC, date
 from hashlib import sha256
 
 from firebase_admin import firestore
@@ -88,6 +88,24 @@ class MarketStore:
             return True
 
         return write(self.db.transaction())
+
+    def reserve_explanation(self, uid: str, day: date, *, per_user: int, global_limit: int) -> bool:
+        counters = self.db.collection("marketExplanationUsage")
+        user = sha256(uid.encode()).hexdigest()
+        daily = counters.document(f"{day}:global")
+        personal = counters.document(f"{day}:user:{user}")
+
+        @firestore.transactional
+        def reserve(transaction):
+            global_count = (daily.get(transaction=transaction).to_dict() or {}).get("count", 0)
+            user_count = (personal.get(transaction=transaction).to_dict() or {}).get("count", 0)
+            if global_count >= global_limit or user_count >= per_user:
+                return False
+            transaction.set(daily, {"day": day.isoformat(), "count": global_count + 1})
+            transaction.set(personal, {"day": day.isoformat(), "count": user_count + 1})
+            return True
+
+        return reserve(self.db.transaction())
 
     def get_listing(self, listing_id: str) -> Listing | None:
         record = self.db.collection("listings").document(listing_id).get().to_dict()
