@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from app.core.config import Settings
@@ -10,6 +10,9 @@ class MarketLensSettings(Settings):
     )
 
     firebase_project_id: str = Field(default="demo-marketlens-local", max_length=30)
+
+    openai_api_key: SecretStr = SecretStr("")
+    openai_model: str = Field(default="", max_length=100, pattern=r"^[A-Za-z0-9._-]*$")
 
     @field_validator("firebase_project_id")
     @classmethod

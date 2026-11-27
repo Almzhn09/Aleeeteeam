@@ -187,7 +187,7 @@ export function MarketListing() {
           </Button>
           {error && <p role="alert">{error}</p>}
           {explanation && <div className="space-y-2" aria-live="polite">
-            <p className="text-sm text-muted-foreground">{explanation.provider === 'gemini' ? 'Пояснение Gemini' : 'Локальное пояснение'}</p>
+            <p className="text-sm text-muted-foreground">{{ local: 'Локальное пояснение', gemini: 'Пояснение Gemini', openai: 'Пояснение OpenAI' }[explanation.provider]}</p>
             <p>{explanation.summary}</p>
             {[
               ['Наблюдения', explanation.insights],

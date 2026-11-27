@@ -19,6 +19,7 @@ cd backend
 export MARKETLENS_FIREBASE_ENABLED=true MARKETLENS_FIREBASE_PROJECT_ID=demo-marketlens-local
 export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9199 FIRESTORE_EMULATOR_HOST=127.0.0.1:8188
 export MARKETLENS_GEMINI_API_KEY= MARKETLENS_GEMINI_MODEL=
+export MARKETLENS_OPENAI_API_KEY= MARKETLENS_OPENAI_MODEL=
 ```
 
 Создайте временную учётную запись в Auth Emulator. Используйте уникальный
@@ -90,7 +91,7 @@ uv run --frozen python -m app.marketlens.update_olx --authorized --limit 30
    к той же карточке, а повторный импорт того же файла снимок не добавляет.
 4. Откройте разделы выгодных и подозрительных предложений. Если выборка
    не содержит соответствующих карточек, интерфейс покажет пустое состояние.
-5. Запросите пояснение оценки. При пустом ключе Gemini используется
+5. Запросите пояснение оценки. Без настроенного внешнего провайдера используется
    локальное пояснение.
 
 Проверку заполненного API можно повторить из корня репозитория:

@@ -322,3 +322,50 @@ def test_default_views_rank_scores_and_allow_explicit_price_sort():
                 path, params={"view": view, "limit": 1, "sort": "price_desc"}, headers=HEADERS
             ).json()
             assert expensive["items"][0]["listing"]["id"] == "olx:42"
+
+
+def test_openai_explanation_is_grounded_and_preserves_local_fallback():
+    row = listing(title="PRIVATE TITLE", description="PRIVATE DESCRIPTION")
+    item = ListingItem(listing=row, analysis=result_for(row))
+    settings = MarketLensSettings(
+        _env_file=None,
+        openai_model="example-model",
+        openai_api_key="test-openai-key",
+        gemini_model="example-gemini",
+        gemini_api_key="test-gemini-key",
+    )
+
+    def respond(request, status=200, finish="stop", summary="Обзор"):
+        assert str(request.url) == "https://api.openai.com/v1/chat/completions"
+        assert request.headers["Authorization"] == "Bearer test-openai-key"
+        body = json.loads(request.content)
+        assert body["model"] == "example-model"
+        assert body["store"] is False
+        assert body["response_format"]["json_schema"]["strict"] is True
+        assert "PRIVATE" not in request.content.decode()
+        assert row.id not in request.content.decode()
+        assert json.loads(body["messages"][1]["content"])["marketPrice"] == 100000
+        content = {
+            "summary": summary,
+            "insights": [],
+            "recommendations": [],
+            "limitations": ["Цены объявлений"],
+        }
+        return httpx.Response(
+            status,
+            json={
+                "choices": [{"finish_reason": finish, "message": {"content": json.dumps(content)}}]
+            },
+        )
+
+    def unexpected(request):
+        pytest.fail("A denied quota must prevent the provider request")
+
+    assert explain(item, settings, transport=httpx.MockTransport(respond)).provider == "openai"
+    for override in ({"status": 429}, {"finish": "length"}, {"summary": "Цена 123 тенге"}):
+        mock = httpx.MockTransport(lambda request, options=override: respond(request, **options))
+        assert explain(item, settings, transport=mock).provider == "local"
+    result = explain(
+        item, settings, reserve=lambda: False, transport=httpx.MockTransport(unexpected)
+    )
+    assert result.provider == "local"

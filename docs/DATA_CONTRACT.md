@@ -87,5 +87,5 @@ scrapedAt, price и currency. По умолчанию 20 последних сн
 Параметр limit принимает значения от 1 до 100. GET /stats возвращает
 {items, truncated}. POST /listings/{id}/explanation возвращает
 {provider, summary, insights, recommendations, limitations}. provider —
-local или gemini. В MVP поиск/фильтры работают по первым 1000 реальных записям
+local, gemini или openai. В MVP поиск/фильтры работают по первым 1000 реальных записям
 в порядке document ID. При превышении лимита интерфейс сообщает об ограничении.

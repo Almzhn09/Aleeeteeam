@@ -74,7 +74,7 @@ export interface StatsPage {
 }
 
 export interface Explanation {
-  provider: 'local' | 'gemini'
+  provider: 'local' | 'gemini' | 'openai'
   summary: string
   insights: string[]
   recommendations: string[]

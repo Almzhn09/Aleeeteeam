@@ -29,7 +29,7 @@ class Explanation(MarketModel):
 
 
 class ExplanationResponse(Explanation):
-    provider: Literal["local", "gemini"]
+    provider: Literal["local", "gemini", "openai"]
 
 
 def explain(
@@ -55,12 +55,10 @@ def explain(
         recommendations=["Сверьте комплектацию, состояние и условия оплаты с оригиналом."],
         limitations=[MARKET_LIMITATION],
     )
-    if (
-        result is None
-        or not settings.gemini_model
-        or not settings.gemini_api_key.get_secret_value()
-        or (reserve is not None and not reserve())
-    ):
+    openai_key = settings.openai_api_key.get_secret_value()
+    use_openai = bool(settings.openai_model and openai_key)
+    use_gemini = bool(settings.gemini_model and settings.gemini_api_key.get_secret_value())
+    if result is None or not (use_openai or use_gemini) or (reserve is not None and not reserve()):
         return fallback
 
     # Allowlist numeric results and fixed labels. Never send source text or IDs.
@@ -79,27 +77,30 @@ def explain(
         by_alias=True,
     )
     metrics.update(price=item.listing.price, currency=item.listing.currency)
-    endpoint = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{settings.gemini_model}:generateContent"
-    )
     try:
         with httpx.Client(timeout=httpx.Timeout(6.0, connect=2.0), transport=transport) as client:
-            response = client.post(
-                endpoint,
-                headers={"x-goog-api-key": settings.gemini_api_key.get_secret_value()},
-                json={
-                    "systemInstruction": {"parts": [{"text": SYSTEM}]},
-                    "contents": [{"role": "user", "parts": [{"text": json.dumps(metrics)}]}],
-                    "generationConfig": {
-                        "responseMimeType": "application/json",
-                        "responseJsonSchema": Explanation.model_json_schema(),
-                        "maxOutputTokens": 1024,
+            if use_openai:
+                content = openai_explanation(client, settings.openai_model, openai_key, metrics)
+            else:
+                endpoint = (
+                    "https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{settings.gemini_model}:generateContent"
+                )
+                response = client.post(
+                    endpoint,
+                    headers={"x-goog-api-key": settings.gemini_api_key.get_secret_value()},
+                    json={
+                        "systemInstruction": {"parts": [{"text": SYSTEM}]},
+                        "contents": [{"role": "user", "parts": [{"text": json.dumps(metrics)}]}],
+                        "generationConfig": {
+                            "responseMimeType": "application/json",
+                            "responseJsonSchema": Explanation.model_json_schema(),
+                            "maxOutputTokens": 1024,
+                        },
                     },
-                },
-            )
-            response.raise_for_status()
-            content, _ = generated_text(response)
+                )
+                response.raise_for_status()
+                content, _ = generated_text(response)
             explanation = Explanation.model_validate_json(content)
     except (httpx.HTTPError, ValueError, _InvalidResponse):
         return fallback
@@ -115,4 +116,53 @@ def explain(
         MARKET_LIMITATION,
         *(message for message in explanation.limitations[:3] if message != MARKET_LIMITATION),
     ]
-    return ExplanationResponse(provider="gemini", **explanation.model_dump())
+    return ExplanationResponse(
+        provider="openai" if use_openai else "gemini", **explanation.model_dump()
+    )
+
+
+def openai_explanation(client: httpx.Client, model: str, key: str, metrics: dict) -> str:
+    fields = {
+        "summary": {"type": "string"},
+        **{
+            name: {"type": "array", "items": {"type": "string"}}
+            for name in ("insights", "recommendations", "limitations")
+        },
+    }
+    response = client.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {key}"},
+        json={
+            "model": model,
+            "messages": [
+                {"role": "developer", "content": SYSTEM},
+                {"role": "user", "content": json.dumps(metrics)},
+            ],
+            "store": False,
+            "max_completion_tokens": 1024,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "market_explanation",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": fields,
+                        "required": list(fields),
+                        "additionalProperties": False,
+                    },
+                },
+            },
+        },
+    )
+    response.raise_for_status()
+    try:
+        choice = response.json()["choices"][0]
+        message = choice["message"]
+        content = message["content"]
+        if choice["finish_reason"] == "stop" and not message.get("refusal"):
+            if isinstance(content, str):
+                return content
+    except (KeyError, IndexError, TypeError, AttributeError):
+        pass
+    raise ValueError("Invalid OpenAI explanation")
