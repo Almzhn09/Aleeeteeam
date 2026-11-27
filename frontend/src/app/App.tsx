@@ -12,6 +12,7 @@ import { MarketLogo, MarketShell } from '@/features/marketlens/MarketShell'
 const MarketHome = lazy(() => import('@/features/marketlens/MarketHome').then(module => ({ default: module.MarketHome })))
 const MarketCatalog = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketCatalog })))
 const MarketListing = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketListing })))
+const MarketRadarPage = lazy(() => import('@/features/marketlens/MarketRadar').then(module => ({ default: module.MarketRadarPage })))
 
 const DronePage = lazy(() => import('@/features/drone/DronePage').then(module => ({ default: module.DronePage })))
 const DroneDetail = lazy(() => import('@/features/drone/DroneDetail').then(module => ({ default: module.DroneDetail })))
@@ -80,6 +81,7 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
       <Route path="/risk" element={<MarketCatalog key="risk" view="risk" />} />
       <Route path="/listings/:id" element={<MarketListing key={pathname} />} />
       <Route path="/compare" element={<MarketComparison />} />
+      <Route path="/radar" element={<MarketRadarPage />} />
       <Route path="*" element={<EmptyState title="Страница не найдена"><Link to="/">Вернуться на главную</Link></EmptyState>} />
     </Routes></Suspense></RouteBoundary>
   </MarketShell></ComparisonProvider>

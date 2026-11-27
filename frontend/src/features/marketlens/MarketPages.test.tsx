@@ -210,3 +210,30 @@ it('compares up to three listings, keeps selection across routes and allows remo
   expect(screen.queryByRole('link', { name: 'Объявление 1' })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Сравнение (2)' })).toBeVisible()
 })
+
+it('moves the budget marker on the price radar and warns about a thin sample', async () => {
+  const stat = (group: string, sampleSize: number) => ({
+    dataset: 'real', computedAt: row.listing.scrapedAt, comparableGroup: group, category: 'electronics',
+    currency: 'KZT', sampleSize, meanPrice: 300000, medianPrice: 300000, minPrice: 200000, maxPrice: 400000,
+    histogram: [{ min: 200000, max: 300000, count: Math.ceil(sampleSize / 2) }, { min: 300000, max: 400000, count: Math.floor(sampleSize / 2) }],
+  })
+  const api = vi.fn().mockResolvedValue({ truncated: false, items: [
+    stat('electronics/phones:apple-iphone-13:any:KZT', 8),
+    stat('electronics/phones:samsung-galaxy-s21:any:KZT', 3),
+    stat('electronics/phones:all:any:KZT', 11),
+  ] })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(), signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/radar']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+
+  expect(await screen.findByRole('heading', { name: 'iPhone 13' })).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Радар цен' })).toHaveClass('active')
+  expect(screen.getByText('4 из 8')).toBeVisible()
+  fireEvent.change(screen.getByRole('slider'), { target: { value: '400000' } })
+  expect(screen.getByText('8 из 8')).toBeVisible()
+  expect(screen.getByText('+33%')).toBeVisible()
+  expect(screen.getByRole('link', { name: /Показать объявления до/ })).toHaveAttribute(
+    'href', '/listings?maxPrice=400000&subcategory=phones')
+  fireEvent.change(screen.getByRole('combobox', { name: 'Модель' }), { target: { value: '1' } })
+  expect(screen.getByRole('status')).toHaveTextContent('Недостаточно сопоставимых объявлений')
+})

@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  ArrowRight, BarChart3, Coins, Layers, Percent, Search, ShieldAlert, ShieldCheck, Smartphone, Tag,
+  Activity, ArrowRight, BarChart3, Coins, Layers, Percent, Radar, Search, ShieldAlert, ShieldCheck, Smartphone, Tag,
 } from 'lucide-react'
 import { ErrorState, LoadingState } from '@/components/WorkspaceUI'
 import { useApiQuery } from '@/lib/useApiQuery'
@@ -43,6 +43,8 @@ export function MarketHome() {
   const groups = [...(stats.data?.items ?? [])].sort((a, b) => b.sampleSize - a.sampleSize)
   const models = groups.filter(isModel)
   const featured = models[0] ?? groups[0]
+  const city = all.data?.items[0]?.listing.city
+  const categories = categoryCounts(groups)
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -63,6 +65,11 @@ export function MarketHome() {
             placeholder="Найти товар, например: iPhone 13" />
           <button type="submit">Найти</button>
         </form>
+        <nav className="ml-quick" aria-label="Быстрые переходы">
+          <Link to="/radar"><Radar size={16} aria-hidden="true" /> Радар цен</Link>
+          <Link to="/deals"><Tag size={16} aria-hidden="true" /> Выгодные</Link>
+          <Link to="/risk"><ShieldAlert size={16} aria-hidden="true" /> Требуют проверки</Link>
+        </nav>
       </div>
       <HeroArt />
       <ul className="ml-features">
@@ -72,6 +79,7 @@ export function MarketHome() {
       </ul>
     </section>
 
+    <h2 className="ml-section-title"><Activity size={20} aria-hidden="true" /> Пульс города{city && ` · ${city}`}</h2>
     <section className="ml-kpis" aria-label="Ключевые показатели">
       <Kpi icon={<Layers size={22} />} tone="green" value={all.data ? marketNumber.format(all.data.scannedCount) + (all.data.scanLimited ? '+' : '') : '—'}
         label="Объявлений в базе" note="OLX" />
@@ -84,6 +92,16 @@ export function MarketHome() {
         label={featured ? `Медиана (${groupTitle(featured)})` : 'Медианная цена'}
         note={featured ? `${featured.sampleSize} объявл.` : undefined} />
     </section>
+
+    {categories.length > 0 && <section className="ml-categories-wrap" aria-labelledby="categories">
+      <div className="ml-card-head">
+        <h2 id="categories" className="ml-section-title">Категории</h2>
+        <Link to="/listings" className="ml-more">Весь каталог <ArrowRight size={15} /></Link>
+      </div>
+      <ul className="ml-categories">
+        {categories.map(([slug, total]) => <CategoryTile key={slug} slug={slug} total={total} />)}
+      </ul>
+    </section>}
 
     <div className="ml-columns">
       <PriceChart groups={models.length ? models : groups} loading={stats.loading} error={stats.error}
@@ -103,6 +121,33 @@ export function MarketHome() {
       </section>
     </div>
   </div>
+}
+
+/** Category-level stats ("…/phones:all:…") summed over conditions, largest first. */
+function categoryCounts(groups: MarketStats[]) {
+  const totals = new Map<string, number>()
+  for (const group of groups) {
+    const [scope, product] = group.comparableGroup.split(':')
+    const slug = scope.split('/')[1]
+    if (product === 'all' && slug) totals.set(slug, (totals.get(slug) ?? 0) + group.sampleSize)
+  }
+  return [...totals].sort((a, b) => b[1] - a[1])
+}
+
+function CategoryTile({ slug, total }: { slug: string; total: number }) {
+  const sample = useApiQuery<ListingPage>(`${apiPath}/listings?${new URLSearchParams({ view: 'all', subcategory: slug, limit: '1' })}`)
+  const [broken, setBroken] = useState(false)
+  const image = broken ? undefined : sample.data?.items[0]?.listing.images.find(url => url.startsWith('https://'))
+  const title = marketCategories[slug] ?? slug.charAt(0).toUpperCase() + slug.slice(1)
+  return <li>
+    <Link to={`/listings?${new URLSearchParams({ subcategory: slug })}`} className="ml-category">
+      <span className="ml-category-photo">{image
+        ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+        : <Layers size={28} aria-hidden="true" />}</span>
+      <strong>{title}</strong>
+      <span className="ml-muted">{marketNumber.format(total)} объявл.</span>
+    </Link>
+  </li>
 }
 
 function Kpi({ icon, tone, value, label, note }: {
