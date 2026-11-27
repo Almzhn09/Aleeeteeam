@@ -154,7 +154,7 @@ it('shows live counts, top deals and price distribution on the home page', async
     if (path.includes('view=all')) return {
       items: [row], nextOffset: 1, scanLimited: false, total: 30, scannedCount: 806,
       subcategoryCounts: { tablets: 20, laptops: 10 },
-      subcategoryCovers: { tablets: row.listing.images[0] },
+      subcategoryPhotos: { tablets: row.listing.images[0] },
       latestScrapedAt: row.listing.scrapedAt,
     }
     if (path.includes('view=deals')) return { items: [deal], nextOffset: null, scanLimited: false, scannedCount: 30 }

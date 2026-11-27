@@ -54,7 +54,7 @@ export interface ListingPage {
   scanLimited: boolean
   total?: number
   subcategoryCounts?: Record<string, number>
-  subcategoryCovers?: Record<string, string>
+  subcategoryPhotos?: Record<string, string>
   latestScrapedAt?: string | null
 }
 

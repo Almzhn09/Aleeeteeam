@@ -105,7 +105,7 @@ export function MarketHome() {
       </div>
       <ul className="ml-categories">
         {categories.map(([slug, total]) => <CategoryTile key={slug} slug={slug} total={total}
-          cover={all.data?.subcategoryCovers?.[slug]} />)}
+          cover={all.data?.subcategoryPhotos?.[slug]} />)}
       </ul>
     </section>}
 

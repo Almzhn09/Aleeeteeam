@@ -29,10 +29,11 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
         <MarketLogo />
         <nav aria-label="Основная навигация" className="ml-nav">
           {links.map(({ to, label }) => <NavLink key={to} to={to} end={to === '/'}
+            aria-label={to === '/compare' && ids.length ? `${label} (${ids.length})` : undefined}
             className={({ isActive }) => `ml-nav-link${isActive || (to === '/listings' && inCatalog) ? ' active' : ''}`}>
-            {label}{to === '/compare' && ids.length > 0 && <>{' '}<span className="ml-count" key={ids.length}>
-              <span className="ml-visually-hidden">(</span>{ids.length}<span className="ml-visually-hidden">)</span>
-            </span></>}
+            {label}{to === '/compare' && ids.length > 0 && <>{' '}
+              <span className="ml-count" aria-hidden="true" key={ids.length}>{ids.length}</span>
+            </>}
           </NavLink>)}
         </nav>
         <div className="ml-user">

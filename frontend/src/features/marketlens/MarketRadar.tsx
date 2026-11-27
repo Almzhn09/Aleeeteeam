@@ -74,7 +74,8 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
   const lowest = prices[0]
   const highest = prices[prices.length - 1]
   const [value, setValue] = useState(String(sample.medianPrice ?? lowest))
-  const budget = value === '' ? null : Number(value)
+  const number = Number(value)
+  const budget = value !== '' && Number.isFinite(number) && number >= 0 ? number : null
   const inBudget = budget === null ? 0 : prices.filter(price => price <= budget).length
   const visible = offers.filter(item => budget !== null && item.listing.price !== null
     && item.listing.price <= budget).slice(0, 6)
