@@ -41,7 +41,8 @@ npm run dev -- --mode marketlens --host 127.0.0.1 --port 5174
 Повтор того же снимка безопасен. Алгоритм аналитики публикует результаты
 через `MarketStore.save_analysis` и `MarketStore.save_stats`.
 Пока сборщик не загрузил реальные записи, каталог отображает пустое состояние.
-Gemini необязателен.
+Gemini необязателен. Сборщик OLX и его параметры описаны в
+[инструкции по сбору](backend/app/marketlens/parsers/README.md).
 
 Для проверки без облачных ключей используйте [локальное окружение MarketLens](docs/MARKETLENS_LOCAL.md).
 
