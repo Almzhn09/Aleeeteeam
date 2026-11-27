@@ -16,6 +16,7 @@ from app.marketlens.contracts import (
     StatsPage,
 )
 from app.marketlens.explanation import ExplanationResponse, explain
+from app.marketlens.radar import RadarPage, radar
 from app.marketlens.store import MarketStore
 
 router = APIRouter(prefix="/api/v1/market", tags=["MarketLens"])
@@ -163,6 +164,19 @@ def history(
         if store.get_listing(listing_id) is None:
             raise NotFound()
         return store.price_history(listing_id, limit)
+    except GoogleAPIError:
+        raise IntegrationUnavailable("MarketLens Firestore") from None
+
+
+@router.get("/radar", response_model=RadarPage)
+def price_radar(
+    user: CurrentUser,
+    store: Store,
+    city: Annotated[str, Query(max_length=120)] = "",
+    group: Annotated[str, Query(max_length=300)] = "",
+) -> RadarPage:
+    try:
+        return radar(store, city=city, group=group)
     except GoogleAPIError:
         raise IntegrationUnavailable("MarketLens Firestore") from None
 

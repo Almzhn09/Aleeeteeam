@@ -152,6 +152,11 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
   return <>
     <PageHeading eyebrow="Рынок Казахстана" title={viewLabels[view]}
       description={view === 'risk' ? 'Признаки риска помогают выбрать, что проверить у продавца.' : 'Запрашиваемые цены и результаты сравнения предложений.'} />
+    <nav aria-label="Подборки каталога" className="mb-4 flex flex-wrap gap-4 text-sm text-primary">
+      {view !== 'all' && <Link to="/listings">Все объявления</Link>}
+      {view !== 'deals' && <Link to="/deals">Выгодные предложения</Link>}
+      {view !== 'risk' && <Link to="/risk">Требуют проверки</Link>}
+    </nav>
     <form ref={form} onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <FormField label="Поиск"><input name="q" defaultValue={filters.get('q') ?? ''} maxLength={120} type="search" /></FormField>
       {filters.has('category') && <input type="hidden" name="category" defaultValue={filters.get('category') ?? ''} />}

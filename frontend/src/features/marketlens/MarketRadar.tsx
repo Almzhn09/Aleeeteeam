@@ -1,82 +1,141 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { EmptyState, ErrorState, FormField, LoadingState, PageHeading } from '@/components/WorkspaceUI'
+import { Link, useSearchParams } from 'react-router-dom'
+import { EmptyState, ErrorState, LoadingState, PageHeading } from '@/components/WorkspaceUI'
+import type { ListingItem, MarketStats } from '@/lib/marketlens'
 import { useApiQuery } from '@/lib/useApiQuery'
-import type { MarketStats, StatsPage } from '@/lib/marketlens'
-import { groupTitle } from './MarketHome'
-import { formatPrice, marketNumber } from './dashboard/format'
+import { CompareButton } from './MarketComparison'
+import { formatPrice, marketCategories } from './dashboard/format'
 
-const minimumSample = 5
+interface RadarSample {
+  key: string
+  prices: number[]
+  medianPrice: number | null
+  histogram: MarketStats['histogram']
+  offers: ListingItem[]
+}
 
-function isModel(group: MarketStats) {
-  return group.currency === 'KZT' && group.comparableGroup.split(':')[1]?.includes('-')
+interface RadarPage {
+  groups: { key: string; sampleSize: number }[]
+  sample: RadarSample | null
+  scanLimited: boolean
+}
+
+function modelLabel(key: string) {
+  const [scope, model, ...details] = key.split(':')
+  const section = marketCategories[scope.split('/')[1]] ?? scope
+  const variant = details.length === 3
+    ? details[0].replace(/(\d+)gb$/, '$1 ГБ').replace(/(\d+)tb$/, '$1 ТБ')
+    : ''
+  const title = model.replace(/^apple-iphone-/, 'iPhone-').replace(/-/g, ' ')
+  return [title, variant, section].filter(Boolean).join(' · ')
 }
 
 export function MarketRadar() {
-  const [model, setModel] = useState('')
-  const [budget, setBudget] = useState('')
-  const query = useApiQuery<StatsPage>('/api/v1/market/stats')
-  const groups = query.data?.items.filter(isModel) ?? []
-  const group = groups.find(item => item.comparableGroup === model) ?? groups[0]
-  const amount = budget !== '' && Number.isFinite(Number(budget)) && Number(budget) >= 0
-    ? Number(budget) : null
+  const [params, setParams] = useSearchParams()
+  const city = params.get('city') ?? 'Усть-Каменогорск'
+  const group = params.get('group') ?? ''
+  const query = useApiQuery<RadarPage>(`/api/v1/market/radar?${new URLSearchParams({ city, group })}`)
+  const data = query.data
 
   return <>
-    <PageHeading eyebrow="MarketLens" title="Радар цен"
-      description="Сопоставьте бюджет с распределением запрашиваемых цен выбранной модели."
-      action={<Link to="/listings">Открыть каталог</Link>} />
+    <PageHeading eyebrow="Объявления OLX" title="Радар цен"
+      description="Выберите модель и проверьте, какие предложения укладываются в ваш бюджет." />
+    <div className="panel content-pad grid gap-4 sm:grid-cols-2">
+      <label className="grid gap-2 text-sm font-semibold">Город
+        <select value={city} onChange={event => setParams({ city: event.target.value })}
+          className="w-full rounded-lg border bg-background p-2">
+          <option value="Усть-Каменогорск">Усть-Каменогорск</option>
+          <option value="">Весь Казахстан</option>
+        </select>
+      </label>
+      <label className="grid gap-2 text-sm font-semibold">Модель
+        <select value={data?.sample?.key ?? group} disabled={!data?.groups.length}
+          onChange={event => setParams({ city, group: event.target.value })}
+          className="w-full rounded-lg border bg-background p-2">
+          {!data?.sample && <option value={group}>Выбрать модель</option>}
+          {data?.groups.map(item => <option value={item.key} key={item.key}>
+            {modelLabel(item.key)} ({item.sampleSize})
+          </option>)}
+        </select>
+      </label>
+    </div>
     {query.loading && <LoadingState />}
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
-    {query.data?.truncated && <p role="status">В радаре доступны группы из последнего расчёта.</p>}
-    {query.data && !group && <EmptyState title="Недостаточно сопоставимых объявлений">
-      <p>Радар появится, когда в каталоге наберётся выборка по конкретной модели.</p>
+    {data?.scanLimited && <p role="status" className="my-4 text-sm">Радар построен по доступной части каталога.</p>}
+    {data && !data.sample && <EmptyState title="Нет цен для выбранной модели">
+      Выберите другую модель или откройте каталог.
     </EmptyState>}
-    {group && <section className="ml-card space-y-5" aria-labelledby="radar-results">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="Модель"><select value={group.comparableGroup} onChange={event => setModel(event.target.value)}>
-          {groups.map(item => <option key={item.comparableGroup} value={item.comparableGroup}>{groupTitle(item)}</option>)}
-        </select></FormField>
-        <FormField label="Бюджет, ₸"><input value={budget} type="number" min={0} step="any"
-          onChange={event => setBudget(event.target.value)} inputMode="decimal" /></FormField>
-      </div>
-      <h2 id="radar-results" className="text-lg font-semibold">{groupTitle(group)}</h2>
-      <dl className="ml-metrics">
-        <div><dt>Рыночная оценка (медиана)</dt><dd>{formatPrice(group.medianPrice, group.currency)}</dd></div>
-        <div><dt>Выборка</dt><dd>{marketNumber.format(group.sampleSize)} объявл.</dd></div>
-      </dl>
-      {group.sampleSize < minimumSample || group.medianPrice == null || !group.histogram.length
-        ? <p role="status">Недостаточно данных для сравнения бюджета.</p>
-        : <BudgetDistribution group={group} budget={amount} />}
-    </section>}
+    {data?.sample && <BudgetAnalysis key={`${city}:${data.sample.key}`} sample={data.sample} />}
   </>
 }
 
-function BudgetDistribution({ group, budget }: { group: MarketStats; budget: number | null }) {
-  const highestCount = Math.max(1, ...group.histogram.map(bin => bin.count))
-  const low = group.minPrice
-  const high = group.maxPrice
-  const position = budget != null && low != null && high != null
-    ? high > low ? Math.max(0, Math.min(100, 100 * (budget - low) / (high - low))) : 50
-    : null
-  return <figure aria-labelledby="radar-distribution" className="space-y-3">
-    <figcaption id="radar-distribution" className="font-semibold">Распределение цен</figcaption>
-    <div className="relative">
-      <ol className="ml-bars" aria-label="Количество объявлений по ценовым интервалам">
-        {group.histogram.map((bin, index) => <li key={index}>
-          <span className="ml-bar-count">{bin.count}</span>
-          <span className="ml-bar" style={{ height: `${Math.max(4, bin.count / highestCount * 100)}%` }} />
-          <span className="ml-bar-label">{marketNumber.format(bin.min)}</span>
-          <span className="ml-visually-hidden">{formatPrice(bin.min, group.currency)} – {formatPrice(bin.max, group.currency)}: {bin.count} объявл.</span>
+function BudgetAnalysis({ sample }: { sample: RadarSample }) {
+  const { prices, histogram, offers } = sample
+  const lowest = prices[0]
+  const highest = prices[prices.length - 1]
+  const [value, setValue] = useState(String(sample.medianPrice ?? lowest))
+  const budget = value === '' ? null : Number(value)
+  const inBudget = budget === null ? 0 : prices.filter(price => price <= budget).length
+  const visible = offers.filter(item => budget !== null && item.listing.price !== null
+    && item.listing.price <= budget).slice(0, 6)
+  const maxCount = Math.max(1, ...histogram.map(bin => bin.count))
+  const marker = budget === null ? null
+    : Math.max(0, Math.min(100, (budget - lowest) / (highest - lowest || 1) * 100))
+
+  return <div className="my-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <section className="panel content-pad min-w-0 space-y-5" aria-label="Распределение цен">
+      <div>
+        <h2>Распределение цен</h2>
+        <p className="text-sm text-muted-foreground">{prices.length} предложений с ценой в тенге</p>
+      </div>
+      <div className="relative">
+        <ol className="flex h-32 items-end gap-1 border-b pb-1" aria-label="Количество объявлений по диапазонам">
+          {histogram.map((bin, index) => {
+            const caption = `${formatPrice(bin.min, 'KZT')} – ${formatPrice(bin.max, 'KZT')}: ${bin.count}`
+            return <li key={index} title={caption}
+              className="flex h-full min-w-0 flex-1 items-end justify-center">
+              <span className="sr-only">{caption}</span>
+              <span aria-hidden="true" className={`w-full rounded-t-md ${budget !== null && bin.min <= budget
+                ? 'bg-primary' : 'bg-muted'} motion-safe:transition-colors`}
+                style={{ height: `${Math.max(3, bin.count / maxCount * 100)}%` }} />
+            </li>
+          })}
+        </ol>
+        {marker !== null && <span aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 border-r-2 border-amber-500 motion-safe:transition-[left]"
+          style={{ left: `${marker}%` }} />}
+      </div>
+      <p className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
+        <span>{formatPrice(lowest, 'KZT')}</span><span>{formatPrice(highest, 'KZT')}</span>
+      </p>
+      <label className="grid gap-2 text-sm font-semibold">Бюджет, ₸
+        <input type="number" min="0" step="any" value={value} onChange={event => setValue(event.target.value)}
+          className="rounded-lg border bg-background p-2" />
+      </label>
+      <input type="range" min="0" max={Math.ceil(highest)} step="1"
+        value={Math.min(Math.ceil(highest), Math.max(0, budget ?? 0))}
+        aria-label="Изменить бюджет" onChange={event => setValue(event.target.value)}
+        className="w-full accent-primary" />
+      <p aria-live="polite">{budget === null ? 'Введите бюджет' : `В бюджете ${inBudget} из ${prices.length}`}</p>
+      <p className="text-sm text-muted-foreground">{sample.medianPrice === null
+        ? 'Пока мало сопоставимых объявлений для рыночного ориентира.'
+        : `Медиана цен объявлений: ${formatPrice(sample.medianPrice, 'KZT')}`}</p>
+    </section>
+
+    <section className="panel content-pad min-w-0 space-y-4" aria-label="Предложения в бюджете">
+      <h2>Предложения в бюджете</h2>
+      {!visible.length && <p className="text-sm text-muted-foreground">Нет предложений в пределах бюджета.</p>}
+      <ul className="divide-y">
+        {visible.map(({ listing }) => <li key={listing.id} className="grid gap-2 py-3 sm:grid-cols-[1fr_auto]">
+          <div className="min-w-0">
+            <Link className="font-semibold text-primary break-words" to={`/listings/${encodeURIComponent(listing.id)}`}>
+              {listing.title}
+            </Link>
+            <p className="text-sm">{formatPrice(listing.price, listing.currency)}</p>
+          </div>
+          <CompareButton id={listing.id} />
         </li>)}
-      </ol>
-      {position != null && <span aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 border-l-2 border-amber-500 motion-safe:transition-[left]"
-        style={{ left: `${position}%` }} />}
-    </div>
-    {budget != null && <p role="status">
-      Бюджет {formatPrice(budget, group.currency)} {low != null && budget < low
-        ? 'ниже минимальной цены в выборке.'
-        : high != null && budget > high ? 'выше максимальной цены в выборке.' : 'в пределах цен выборки.'}
-    </p>}
-  </figure>
+      </ul>
+    </section>
+  </div>
 }

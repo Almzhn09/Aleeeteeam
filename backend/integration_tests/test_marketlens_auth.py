@@ -74,9 +74,9 @@ def test_marketlens_auth_and_catalog_use_the_same_emulator_project():
         db = runtime.db()
         collection = db.collection("listings")
         serialized = row.model_dump(mode="json", by_alias=True)
-        for start in range(0, 1010, 400):
+        for start in range(0, 2010, 400):
             batch = db.batch()
-            for index in range(start, min(start + 400, 1010)):
+            for index in range(start, min(start + 400, 2010)):
                 external_id = f"bulk-{index:04d}"
                 listing_id = f"olx:{external_id}"
                 batch.set(
@@ -86,13 +86,13 @@ def test_marketlens_auth_and_catalog_use_the_same_emulator_project():
                         "id": listing_id,
                         "externalId": external_id,
                         "title": "Редкая модель за пределами тысячи"
-                        if index == 1009
+                        if index == 2009
                         else "Телефон",
                     },
                 )
             batch.commit()
-        extended = client.get(path, params={"offset": 1005, "limit": 100}, headers=headers).json()
-        assert extended["scannedCount"] == 1011
-        assert [item["listing"]["id"] for item in extended["items"]][-1] == "olx:bulk-1009"
+        extended = client.get(path, params={"offset": 2005, "limit": 100}, headers=headers).json()
+        assert extended["scannedCount"] == 2011
+        assert [item["listing"]["id"] for item in extended["items"]][-1] == "olx:bulk-2009"
         search = client.get(path, params={"q": "редкая модель"}, headers=headers).json()
-        assert [item["listing"]["id"] for item in search["items"]] == ["olx:bulk-1009"]
+        assert [item["listing"]["id"] for item in search["items"]] == ["olx:bulk-2009"]
