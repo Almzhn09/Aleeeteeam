@@ -146,6 +146,19 @@ class MarketStore:
     def scan_listings(self) -> tuple[list[Listing], bool]:
         return list(self.iter_listings()), False
 
+    def price_snapshots(self, listing_ids: list[str]) -> list[tuple[str, PriceObservation]]:
+        """Every stored observation of these listings, for market price dynamics."""
+        rows: list[tuple[str, PriceObservation]] = []
+        snapshots = self.db.collection("listingSnapshots")
+        for start in range(0, len(listing_ids), 30):  # Firestore "in" takes up to 30 values.
+            query = snapshots.where(
+                filter=firestore.FieldFilter("listingId", "in", listing_ids[start : start + 30])
+            ).select(["listingId", "scrapedAt", "price", "currency"])
+            for record in query.stream():
+                data = record.to_dict()
+                rows.append((data["listingId"], PriceObservation.model_validate(data)))
+        return rows
+
     def with_analysis(self, listings: list[Listing]) -> list[ListingItem]:
         if not listings:
             return []
