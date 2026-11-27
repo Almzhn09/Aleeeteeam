@@ -259,7 +259,7 @@ MON-IG-02 подтверждён коротким live trial и запуском
 - [x] **QA-02 · A** — Frontend typecheck/build and core interaction tests, errors and empty states.
 - [x] **QA-03 · B** — CI checks Python style/tests and TS typecheck/build for each PR to main.
 - [x] **DOC-02 · B** — Add `docs/risk-rules.md`, `docs/ai-methodology.md` and API examples.
-- [x] **DOC-03 · B** — Add `docs/data-model.md`, `docs/architecture.md`, Firebase index/rules setup and system diagram.
+- [x] **DOC-03 · B** — Add `docs/data-model.md`, `docs/saq-architecture.md`, Firebase index/rules setup and system diagram.
 - [x] **DOC-04 · A** — Add `docs/demo-scenarios.md` with step-by-step clicks and expected results.
 - [x] **LINK-01 · B** — Normalize shared phone numbers (+7/8), WhatsApp URLs, website domains and alias names. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.
 - [x] **LINK-02 · B** — Propose ad-to-ad links with explicit evidence; optionally add image perceptual hashes / embedding similarity. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.

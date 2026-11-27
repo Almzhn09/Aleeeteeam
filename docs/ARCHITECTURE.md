@@ -6,7 +6,7 @@
 
 ## Аудит Saq Qurylys
 
-- Переиспользуем FastAPI, настройку CORS, ошибки и request ID из app/main.py,
+- Переиспользуем FastAPI, настройку CORS, ошибки и request ID из app/application.py,
   FirebaseRuntime, проверку токена и /me. MarketLens подключает свои маршруты
   через отдельную точку входа. Старые рабочие маршруты не монтируются в ней.
 - Firebase Auth, API-клиент, React Router, RouteBoundary, WorkspaceUI и

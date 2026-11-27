@@ -1,3 +1,50 @@
+# MarketLens
+
+MarketLens помогает сравнивать запрашиваемые цены объявлений Казахстана и
+замечать признаки риска. [Проект](docs/PROJECT.md) ·
+[Архитектура](docs/ARCHITECTURE.md) · [Контракт](docs/DATA_CONTRACT.md) ·
+[Задачи](docs/TASKS.md) · [Владение файлами](docs/FILE_OWNERSHIP.md)
+
+Для локального запуска нужны Python 3.12, uv и Node.js 24. Скопируйте
+`marketlens.env.example` в `.env.marketlens.local`. Укажите выделенный
+Firebase-проект MarketLens, выставьте `MARKETLENS_FIREBASE_ENABLED=true`,
+включите Email/Password и Firestore, задайте
+роль `analyst` или `admin` пользователю и выдайте серверу учётные данные
+для этого проекта. Для установки роли из `backend/` выполните
+`uv run --frozen python -m app.cli.role UID analyst --marketlens --project-confirm PROJECT_ID`.
+Укажите ID выделенного проекта. Развёртывайте Firestore rules
+с явным `--project` MarketLens. Сервер доверяет Firebase ID-токенам
+этого проекта и пишет в него через Admin SDK.
+
+В терминале из корня запустите backend:
+
+```bash
+cd backend
+uv sync --frozen
+uv run --frozen uvicorn app.marketlens.main:create_marketlens_app --factory --port 8010
+```
+
+В другом терминале из корня запустите frontend:
+
+```bash
+cd frontend
+npm ci
+npm run dev -- --mode marketlens --host 127.0.0.1 --port 5174
+```
+
+Для production-сборки веб-клиента из `frontend/` используйте
+`npm run typecheck && npm exec -- vite build --mode marketlens`.
+
+Доверенный серверный импорт принимает массив из 1–1000 нормализованных
+реальных записей по контракту. Из `backend/` выполните
+`uv run --frozen python -m app.marketlens.import_listings listings.json`.
+Повтор того же снимка безопасен. Алгоритм аналитики публикует результаты
+через `MarketStore.save_analysis` и `MarketStore.save_stats`.
+Пока сборщик не загрузил реальные записи, каталог отображает пустое состояние.
+Gemini необязателен.
+
+---
+
 <div align="center">
 
 # SAQ QURYLYS
@@ -88,7 +135,7 @@ docker compose -f compose.demo.yaml down
 **React + TypeScript + Vite** — интерфейс. **FastAPI + Pydantic** — API и проверка
 данных. **Firebase Auth, Firestore и Storage** — облачный доступ, данные и файлы.
 **Gemini** вызывается сервером. **Leaflet / OpenStreetMap** — карта,
-**WeasyPrint** — PDF. [Подробнее об архитектуре](docs/architecture.md).
+**WeasyPrint** — PDF. [Подробнее об архитектуре](docs/saq-architecture.md).
 
 ```text
 frontend/       Интерфейс приложения и его тесты

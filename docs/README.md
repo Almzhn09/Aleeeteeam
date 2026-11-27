@@ -16,7 +16,7 @@
 
 ## Устройство и возможности
 
-- [Архитектура](architecture.md) и [модель данных](data-model.md).
+- [Архитектура](saq-architecture.md) и [модель данных](data-model.md).
 - [ИИ и проверка гипотез](ai-methodology.md), [единая реклама и API](material-workflow-contract.md).
 - [Сбор рекламы](monitoring.md), [Instagram через SearchAPI](instagram-searchapi.md), [открытые источники](public-sources.md).
 - [Проверка разрешений и гарантий](registry-screening.md), [сигналы и PDF](signals.md).

@@ -134,7 +134,7 @@ frontend/src/{app,components,features,lib}
 backend/app/{api,core,models,schemas,repositories,services}
 backend/tests/
 data/seed/
-docs/{PROJECT_SPEC.md,DEVELOPMENT_PLAN.md,architecture.md,data-model.md,risk-rules.md,ai-methodology.md,demo-scenarios.md}
+docs/{PROJECT_SPEC.md,DEVELOPMENT_PLAN.md,saq-architecture.md,data-model.md,risk-rules.md,ai-methodology.md,demo-scenarios.md}
 scripts/
 compose.yaml
 .env.example
