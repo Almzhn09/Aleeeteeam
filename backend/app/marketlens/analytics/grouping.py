@@ -11,8 +11,10 @@ from dataclasses import dataclass
 
 from app.marketlens.contracts import Listing
 
-LEVELS = ("variant", "model", "brand", "category")
-LEVEL_WEIGHT = {"variant": 1.0, "model": 0.9, "brand": 0.6, "category": 0.4}
+# Prices are compared only inside one model; brand and category are overview stats.
+LEVELS = ("variant", "model")
+OVERVIEW_LEVELS = ("brand", "category")
+LEVEL_WEIGHT = {"variant": 1.0, "model": 0.9}
 
 _TRANSLITERATION = tuple(
     (re.compile(pattern), replacement)
