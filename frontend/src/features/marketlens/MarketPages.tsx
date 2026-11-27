@@ -123,7 +123,8 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
       <FormField label="От, ₸"><input name="minPrice" defaultValue={filters.get('minPrice') ?? ''} type="number" min={0} step="any" /></FormField>
       <FormField label="До, ₸"><input name="maxPrice" defaultValue={filters.get('maxPrice') ?? ''} type="number" min={0} step="any" /></FormField>
       <FormField label="Сортировка"><select name="sort" defaultValue={filters.get('sort') ?? ''}>
-        <option value="">По умолчанию</option><option value="newest">Свежие наблюдения</option>
+        <option value="">{view === 'deals' ? 'По оценке выгоды' : view === 'risk' ? 'По уровню риска' : 'По умолчанию'}</option>
+        <option value="newest">Свежие наблюдения</option>
         <option value="price_asc">Сначала дешевле, ₸</option><option value="price_desc">Сначала дороже, ₸</option>
       </select></FormField>
       <div className="flex flex-wrap gap-2">

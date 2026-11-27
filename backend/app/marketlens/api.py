@@ -116,6 +116,9 @@ def catalog(
                     else item.analysis.risk_level in {"medium", "high"}
                 )
             ]
+            if sort == "default":
+                score = "deal_score" if view == "deals" else "risk_score"
+                selected.sort(key=lambda item: getattr(item.analysis, score) or 0, reverse=True)
             items = selected[offset : offset + limit]
             total = len(selected)
     except GoogleAPIError:

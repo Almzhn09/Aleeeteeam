@@ -195,12 +195,12 @@ def test_gemini_uses_only_metrics_and_falls_back_on_timeout():
         _env_file=None, gemini_model="example-model", gemini_api_key="test-key"
     )
 
-    def success(request):
+    def success(request, summary="Обзор"):
         body = json.loads(request.content)
         assert "UNTRUSTED" not in request.content.decode()
         assert json.loads(body["contents"][0]["parts"][0]["text"])["marketPrice"] == 100000
         output = {
-            "summary": "Обзор",
+            "summary": summary,
             "insights": [],
             "recommendations": [],
             "limitations": ["Цены объявлений"],
@@ -227,7 +227,11 @@ def test_gemini_uses_only_metrics_and_falls_back_on_timeout():
         item, settings, reserve=lambda: False, transport=httpx.MockTransport(unexpected_provider)
     )
     assert limited.provider == "local"
-    assert explain(item, settings, transport=httpx.MockTransport(success)).provider == "gemini"
+    generated = explain(item, settings, transport=httpx.MockTransport(success))
+    assert generated.provider == "gemini"
+    assert any("Признаки риска требуют проверки" in limit for limit in generated.limitations)
+    invented = httpx.MockTransport(lambda request: success(request, "Цена 1 000 000 тенге"))
+    assert explain(item, settings, transport=invented).provider == "local"
     assert explain(item, settings, transport=httpx.MockTransport(timeout)).provider == "local"
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"candidates": []}))
     assert explain(item, settings, transport=transport).provider == "local"
@@ -285,3 +289,32 @@ def test_olx_update_does_not_open_firestore_on_collection_failure(
         if source_failure == "unavailable"
         else "catalog was left unchanged" in out.err
     )
+
+
+def test_default_views_rank_scores_and_allow_explicit_price_sort():
+    class RankedStore(Store):
+        def with_analysis(self, rows):
+            return [
+                ListingItem(
+                    listing=row,
+                    analysis=result_for(
+                        row,
+                        risk_score=70 if row.id == "olx:43" else 40,
+                        deal_score=70 if row.id == "olx:43" else 50,
+                    ),
+                )
+                for row in rows
+            ]
+
+    application = create_marketlens_app(MarketLensSettings(_env_file=None))
+    application.dependency_overrides[get_runtime] = Identity
+    application.dependency_overrides[market_store] = RankedStore
+    with TestClient(application) as client:
+        path = "/api/v1/market/listings"
+        for view in ("deals", "risk"):
+            top = client.get(path, params={"view": view, "limit": 1}, headers=HEADERS).json()
+            assert top["items"][0]["listing"]["id"] == "olx:43"
+            expensive = client.get(
+                path, params={"view": view, "limit": 1, "sort": "price_desc"}, headers=HEADERS
+            ).json()
+            assert expensive["items"][0]["listing"]["id"] == "olx:42"
