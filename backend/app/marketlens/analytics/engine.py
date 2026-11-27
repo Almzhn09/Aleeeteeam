@@ -207,7 +207,7 @@ def models_needing_samples(listings: Iterable[Listing], top: int = 10) -> dict[s
     """
     counts: dict[str, int] = defaultdict(int)
     for row in latest_observations(listings):
-        if row.dataset == "real" and _market_eligible(row) and not risk.is_accessory(row):
+        if row.dataset == "real" and _market_eligible(row):
             if model := group_keys(row).get("model"):
                 counts[model] += 1
     thin = [(model, count) for model, count in counts.items() if count <= MIN_PEERS]

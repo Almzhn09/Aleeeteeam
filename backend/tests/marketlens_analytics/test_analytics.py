@@ -429,3 +429,21 @@ def test_models_needing_samples_lists_thin_real_models():
         "electronics/phones:apple-iphone-15-pro:any:KZT": 2,
         "electronics/phones:xiaomi-redmi13c:any:KZT": 1,
     }
+
+
+@pytest.mark.parametrize(
+    ("title", "codes"),
+    [
+        ("iPhone 13 без торга, документы есть", []),
+        ("iPhone 13 без предоплаты", []),
+        ("iPhone 13 не разбит, не заблокирован", []),
+        ("iPhone 13 без блокировки", []),
+        ("iPhone 13 без документов", ["lock_or_documents"]),
+        ("iPhone 13 заблокирован", ["lock_or_documents"]),
+        ("iPhone 13 только предоплата", ["prepayment_request"]),
+        ("iPhone 13 не включается", ["parts_or_damage"]),
+        ("iPhone 13 не оригинал", ["replica_mention"]),
+    ],
+)
+def test_negated_phrases_do_not_raise_signals(title, codes):
+    assert [signal.code for signal in risk.text_signals(phone("x", title, 300000))] == codes

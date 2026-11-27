@@ -40,7 +40,7 @@ _TEXT_SIGNALS = (
     (
         re.compile(
             r"\b(?:(?:на|под) (?:icloud|айклауд)|icloud lock|заблокир\w*|блокировк\w*|"
-            r"залочен\w*|locked|без (?:\w+ ){0,2}документ\w*)\b"
+            r"залочен\w*|locked|без (?:коробки и |чека и )?документ\w*)\b"
         ),
         Signal(
             "lock_or_documents",
@@ -87,8 +87,15 @@ def is_accessory(listing: Listing) -> bool:
     return _ACCESSORY.search(normalize_text(listing.title)) is not None
 
 
+# "без предоплаты", "не разбит", "без блокировки" deny the problem. Negated words are
+# dropped before matching, except phrases that are signals themselves.
+_NEGATION = re.compile(
+    r"\b(?:не|без|нет)\s+(?!документ|коробки и|чека и|работа|включа|оригинал)\w+"
+)
+
+
 def text_signals(listing: Listing) -> list[Signal]:
-    text = normalize_text(f"{listing.title} {listing.description or ''}")
+    text = _NEGATION.sub(" ", normalize_text(f"{listing.title} {listing.description or ''}"))
     found = [signal for pattern, signal in _TEXT_SIGNALS if pattern.search(text)]
     if is_accessory(listing):
         found.append(ACCESSORY)
