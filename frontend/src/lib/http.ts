@@ -1,0 +1,110 @@
+import { apiUrl } from './apiUrl'
+import { monitorErrors } from '@/features/monitoring/types'
+
+export class ApiError extends Error {
+  constructor(public status: number, public code: string, message: string, public requestId?: string) {
+    super(message)
+  }
+}
+
+export type ApiClient = <T>(path: string, init?: RequestInit) => Promise<T>
+
+export function createApiClient(getToken: () => Promise<string>): ApiClient {
+  return async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+    const url = apiUrl(path)
+    const headers = new Headers(init.headers)
+    headers.set('Authorization', `Bearer ${await getToken()}`)
+    if (init.body && !(init.body instanceof FormData) && !(init.body instanceof Blob)) headers.set('Content-Type', 'application/json')
+    const sourceRun = path.startsWith('/api/v1/monitoring/sources/') && path.endsWith('/run')
+    const companySource = path.startsWith('/api/v1/company-projects/') || (path.startsWith('/api/v1/companies/') && path.endsWith('/refresh'))
+    const timeout = AbortSignal.timeout(companySource ? 90000 : sourceRun ? 280000 : path.endsWith('/analyze') ? 90000 : 40000)
+    const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout
+    let response: Response
+    try {
+      response = await fetch(url, { ...init, headers, signal })
+    } catch (error) {
+      if (init.signal?.aborted) throw error
+      throw new ApiError(0, 'NETWORK_ERROR', sourceRun
+        ? 'Ответ о сборе не получен. Проверьте историю запусков перед повтором: поиск мог расходовать квоту и ещё выполняться на сервере.'
+        : 'Нет связи с сервером. Проверьте подключение и повторите.')
+    }
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => null)
+      const error = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
+      const code = typeof error.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code) ? error.code : 'REQUEST_FAILED'
+      const knownMessages: Record<string, string> = {
+        ...monitorErrors,
+        DRONE_INVALID_RESPONSE: 'Ответ ИИ не прошёл проверку чек-листа. Снимок сохранён; наблюдения не подтверждены.',
+        DRONE_PHOTO_REQUIRED: 'Сначала загрузите фотографию.',
+        DRONE_BUSY: 'Анализ этого снимка уже выполняется. Обновите результаты перед повтором.',
+        DRONE_LIMIT: 'Достигнут предел анализов или решений этой инспекции. Создайте новую запись для нового осмотра.',
+        DRONE_REVIEW_UNAVAILABLE: 'Откройте завершённый актуальный анализ для рассмотрения.',
+        DRONE_INTERRUPTED: 'Предыдущий анализ был прерван. Оригинал сохранён.',
+        COMPANY_SOURCE_INVALID: 'Карточки источника недостаточно для определения участников. Проверьте оригинал.',
+        COMPANY_LIVE_REGISTRY_REQUIRED: 'Добавление реальных ЖК в этом режиме недоступно. Участников можно сохранить отдельно.',
+        COMPANY_PROJECT_INCOMPLETE: 'В источнике не установлен застройщик или этап строительства. Можно сохранить участников без добавления ЖК.',
+        COMPANY_RECORD_LIMIT: 'Достигнут предел сохранённых сведений организации. Прежние записи сохранены.',
+
+        REGISTRY_UNAVAILABLE: 'Реестр сейчас недоступен. Сохранённые данные доступны; отсутствие ответа не означает отсутствие разрешения.',
+        REGISTRY_RESPONSE_INVALID: 'Формат ответа реестра изменился. Проверьте документ на сайте источника.',
+        REGISTRY_RECORD_UNVERIFIABLE: 'Карточки недостаточно для подтверждения. Проверьте регион, реквизиты и оригинал документа.',
+        REGISTRY_QUERY_INVALID: 'Введите название ЖК или адрес: от 3 до 100 символов.',
+        REGISTRY_RECORD_INVALID: 'Выберите карточку объекта из результатов Homeportal.',
+        REGISTRY_LIMIT: 'Достигнут дневной лимит проверок реестров. Продолжите на сайтах источников или завтра.',
+        REGISTRY_DATE_MISMATCH: 'Проверьте дату оригинальной рекламы: она должна совпадать с известной датой публикации и быть не позже получения.',
+        REGISTRY_DOCUMENT_CHANGED: 'Реквизиты документа изменились после просмотра. Откройте документ заново и повторите сверку.',
+        REGISTRY_DOCUMENT_TOO_RECENT: 'Документ выдан после даты рекламы. Он не подтверждает основание на дату публикации.',
+
+        MONITOR_NOT_DUE: 'Интервал источника ещё не истёк. Следующее время сбора указано в карточке.',
+        MONITOR_BUSY: 'Источник уже обрабатывается. Обновите историю запусков.',
+        MONITOR_PAUSED: 'Источник на паузе. Возобновите его перед сбором.',
+        MONITOR_DAILY_LIMIT: 'Достигнут суточный лимит сбора. Новый день считается по UTC.',
+        MONITOR_SOURCE_LIMIT: 'Достигнут лимит 20 источников мониторинга.',
+        MONITOR_SOURCE_INVALID: 'Введите поисковый запрос или имя публичного Telegram-канала без ссылки на отдельный пост.',
+        MONITOR_SOURCE_BLOCKED: 'Источник ограничил доступ. Это не означает отсутствия публикаций.',
+        MONITOR_SOURCE_FORMAT: 'Не удалось прочитать публикации: формат источника изменён или он недоступен.',
+        MONITOR_SOURCE_HTTP: 'Источник недоступен или перенаправляет запрос. Сбор не выполнен.',
+        MONITOR_SOURCE_NETWORK: 'Нет связи с публичным источником. Сохранённые находки доступны.',
+        MONITOR_SOURCE_TIMEOUT: 'Превышено время сбора. Проверьте историю запусков перед новой попыткой.',
+        MONITOR_SOURCE_SIZE: 'Источник вернул слишком большую страницу. Сбор остановлен.',
+        MONITOR_RUN_FAILED: 'Сбор не завершён. Проверьте состояние источника и историю запусков.',
+        MONITOR_LIVE_REGISTRY_REQUIRED: 'Для публикации требуется карточка реального жилого комплекса.',
+        AI_DAILY_LIMIT: 'Достигнут дневной лимит анализов. Повторите в следующие сутки UTC.',
+        AI_PROVIDER_QUOTA: 'Лимит Gemini исчерпан. Повторите позже или проверьте квоту проекта.',
+        AI_NOT_CONFIGURED: 'AI ещё не настроен. Попросите администратора проверить модель и ключ Gemini на сервере.',
+        AI_CREDENTIALS: 'Ключ Gemini на сервере не принят. Администратору нужно проверить ключ; повторный анализ пока не запускайте.',
+        AI_ACCESS_DENIED: 'Gemini отклонил доступ. Администратору нужно проверить доступ к API и ограничения серверного ключа.',
+        AI_MODEL_UNAVAILABLE: 'Выбранная модель Gemini недоступна для анализа. Администратору нужно выбрать доступную модель на сервере.',
+        AI_TIMEOUT: 'Ответ Gemini не получен вовремя. Обновите результаты перед новым запуском: повтор может расходовать квоту.',
+        AI_NETWORK: 'Сервер не смог связаться с Gemini. Обновите результаты и повторите позже.',
+        AI_TEMPORARY: 'Gemini временно недоступен. Исходный материал сохранён; повторите позже.',
+        AI_REQUEST_REJECTED: 'Gemini отклонил формат запроса. Передайте код обращения администратору.',
+        FIRESTORE_INDEX_REQUIRED: 'История или список пока недоступны: администратору нужно проверить готовность индексов Firestore.',
+        PDF_RENDER_FAILED: 'Не удалось сформировать PDF. Карточка сигнала сохранена; повторите позже или используйте печать карточки.',
+        AI_INVALID_RESPONSE: 'Ответ Gemini не прошёл проверку. Гипотезы не сохранены; исходный материал доступен.',
+        INVALID_IMAGE: 'Выберите корректный статичный JPEG, PNG или WebP до 20 мегапикселей.',
+        FILE_INTEGRITY: 'Контрольная сумма файла не совпала. Обратитесь к администратору.',
+        FACTOR_NOT_SUPPORTED: 'Источники не подтверждают этот фактор. Проверьте тип доказательства и отмеченные факты.',
+        EXCERPT_MISMATCH: 'Цитата должна точно совпадать с фрагментом оригинального объявления.',
+        SOURCE_MISMATCH: 'Ссылка должна совпадать с оригинальным объявлением.',
+        TRACE_STALE: 'Исходное объявление изменилось. Обновите совпадения и проверьте новый материал; обоснование сохранено в форме.',
+        TRACE_NO_MATCH: 'Поддержанное совпадение больше не найдено. Обновите список и проверьте оригиналы.',
+        TRACE_TOO_MANY_IDENTIFIERS: 'В тексте слишком много контактов для полной проверки. Требуется отдельная проверка оригинала.',
+        PDF_BUSY: 'Генератор PDF занят. Повторите через несколько секунд.',
+        EXPIRED_BASIS: 'Нельзя подтвердить основание с истёкшим сроком действия.',
+      }
+      const message = (Object.hasOwn(knownMessages, code) ? knownMessages[code] : undefined) || (response.status === 401 ? 'Сессия истекла. Войдите снова.'
+        : response.status === 403 ? 'Недостаточно прав для этого действия.'
+        : response.status === 503 ? 'Сервис временно недоступен или ещё не настроен.'
+        : response.status === 409 ? 'Данные изменились. Обновите страницу и повторите действие.'
+        : response.status === 429 ? 'Достигнут лимит AI-запросов. Повторите позже.'
+        : response.status === 413 ? 'Файл слишком большой. Максимум — 6 МБ.'
+        : response.status === 502 ? 'Внешний сервис вернул некорректный результат. Данные не подтверждены.'
+        : 'Не удалось выполнить запрос. Проверьте данные и повторите.')
+      throw new ApiError(response.status, code, message,
+        typeof error.requestId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(error.requestId) ? error.requestId : undefined)
+    }
+    if (response.headers.get('content-type')?.includes('application/json')) return response.json() as Promise<T>
+    return response.blob() as Promise<T>
+  }
+}

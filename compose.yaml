@@ -1,0 +1,47 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}'
+      FIREBASE_ENABLED: ${FIREBASE_ENABLED:-false}
+      FIREBASE_DEMO_ONLY: ${FIREBASE_DEMO_ONLY:-true}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-saq-qurylys}
+      FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      AI_DAILY_USER_LIMIT: ${AI_DAILY_USER_LIMIT:-20}
+      AI_DAILY_GLOBAL_LIMIT: ${AI_DAILY_GLOBAL_LIMIT:-100}
+      MONITOR_DAILY_FETCH_LIMIT: ${MONITOR_DAILY_FETCH_LIMIT:-100}
+      MONITOR_SOURCES_PER_TICK: ${MONITOR_SOURCES_PER_TICK:-3}
+      SEARCHAPI_API_KEY: ${SEARCHAPI_API_KEY:-}
+      SEARCHAPI_ENABLED: ${SEARCHAPI_ENABLED:-false}
+      SEARCHAPI_SCHEDULE_ENABLED: ${SEARCHAPI_SCHEDULE_ENABLED:-false}
+      SEARCHAPI_DAILY_LIMIT: ${SEARCHAPI_DAILY_LIMIT:-2}
+      SEARCHAPI_CREDIT_RESERVE: ${SEARCHAPI_CREDIT_RESERVE:-20}
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", ".venv/bin/python", "-c", "import json, urllib.request; assert json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)) == {'status': 'ok', 'service': 'saq-qurylys-api'}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+      VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
+      VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+      VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-saq-qurylys}
+      VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:-}
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "Promise.all([fetch('http://127.0.0.1:5173/').then(r=>{if(!r.ok)throw Error('UI unavailable')}),fetch('http://127.0.0.1:5173/api/v1/health').then(r=>r.json()).then(d=>{if(d.status!=='ok'||d.service!=='saq-qurylys-api')throw Error('API unavailable')})]).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

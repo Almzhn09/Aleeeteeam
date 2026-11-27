@@ -1,0 +1,305 @@
+# План SAQ QURYLYS
+
+Актуализирован **20 октября 2026** по поручению владельца. Регион — ВКО.
+Команда: **A — друг, frontend/материалы; B — владелец, backend/AI/выпуск**.
+Текущая очередь — единая реклама/автоматический приоритет: **A — весь UI,
+B — backend/контракты/интеграция**. Исторические исключения MON/MAP/ORG ниже
+не разрешают параллельную правку frontend B в этой очереди.
+
+## Фоновое обновление рекламы · 21 октября
+
+- [x] **UI-POLL · B** — карточки остаются при refresh; polling не прерывает
+  незавершённый запрос, ошибки сохраняют последнюю выборку, фильтр скрывает старую.
+  [PR #36](https://github.com/arturk0-0/3a-saq-qurylys/pull/36).
+  Облачная публикация — отдельно через Cloud Shell владельца.
+
+## Точечное исправление загрузки · 21 октября
+
+- [x] **PERF-MAT · B** — пакетные чтения рекламы, пропуск неизменившегося
+  legacy work и ограниченный повтор read Aborted. Отдельно разрешено владельцем
+  после заморозки; [PR #35](https://github.com/arturk0-0/3a-saq-qurylys/pull/35).
+  Скорость на опубликованном сайте проверяется после отдельного выпуска.
+
+## Публичный репозиторий · 20 октября
+
+- [x] **DOC-JUDGE · B** — README со скриншотом и запуском без ключей, маршрут
+  проверки за пять минут, актуальные инструкции и навигация. Старые отчёты
+  сохранены в архиве; приложение не изменено. [PR #34](https://github.com/arturk0-0/3a-saq-qurylys/pull/34).
+  Публикация сайта остаётся отдельной задачей MAT-DEPLOY.
+
+## Приоритетная очередь · 20 октября: единая реклама
+
+Backend B объединён через [PR #32](https://github.com/arturk0-0/3a-saq-qurylys/pull/32).
+Frontend A и совместные исправления объединены через [PR #33](https://github.com/arturk0-0/3a-saq-qurylys/pull/33).
+Отдельно остаётся облачная публикация, она не выполняется автоматически от merge.
+[План и границы двух Кодексов](tasks/unified-advertising-split.md),
+[целевой API v1](material-workflow-contract.md).
+
+- [x] **MAT-B01 · B / #29** — additive API и единая выборка ручных/собранных материалов.
+- [x] **MAT-B02 · B / #29** — безопасная группировка повторов с оригиналами и ревизиями.
+- [x] **MAT-B03 · B / #29** — очередь автоанализа, идемпотентность, квоты, ошибки/форматы.
+- [x] **MAT-B04 · B / #29** — отдельный предварительный приоритет материала/ЖК.
+- [x] **MAT-B05 · B / #29** — одно review с проверкой доказательств, версий и аудитом.
+- [x] **MAT-A01 · A / #30** — одно меню «Реклама», две вкладки, старые deep links.
+- [x] **MAT-A02 · A / #30** — поиск, фильтры, серверная пагинация и групповые карточки.
+- [x] **MAT-A03 · A / #30** — одна страница проверки/одно сохранение, два показателя.
+- [x] **MAT-A04 · A / #30** — ясные статусы/ошибки, отступы, mobile/keyboard и QA.
+- [x] **MAT-INT · B** — совместный local-demo, browser QA, review, CI и отчёты выпуска.
+- [ ] **MAT-DEPLOY · B** — отдельная публикация новой «Рекламы» и облачная приёмка роли, worker, приватных файлов и одного review.
+
+Issues: [B #29](https://github.com/arturk0-0/3a-saq-qurylys/issues/29),
+[A #30](https://github.com/arturk0-0/3a-saq-qurylys/issues/30).
+Не менять подтверждённую формулу R1–R6; не выдавать ИИ/дубли за проверенные факты.
+Готовность/проценты обратно не добавлять. В разработке без платных запросов/деплоя.
+
+**Предыдущий выпуск, до единой «Рекламы»:** общий выпуск объединён в main
+`107798f` через [PR #25](https://github.com/arturk0-0/3a-saq-qurylys/pull/25).
+Включены сверка оснований (#19), план (#22), компании (#23), дрон (#24), карта A
+и отдельный локальный режим без облачных ключей. Все пять CI jobs release HEAD
+зелёные; 537 backend / 109 frontend тестов. Полный локальный smoke прошёл
+дважды с перезапуском; браузер проверил компании, карту и дрон с сохранением решения.
+[Отчёт выпуска](judge-release-report.md), [локальный запуск](local-demo.md).
+
+**Обновление выпуска:** по выводу Cloud Shell владельца 20 октября опубликован
+b043809 (API 00007-qgr, 100% трафика, Hosting SHA совпал; образ worker обновлён).
+Main `11fd48c` дополнительно содержит исправление helper #27 и UI-отступы/удаление
+готовности #28; облачная публикация #28 пока владельцем не подтверждена.
+Новая MAT-очередь реализована позднее через #32/#33; её публикация остаётся MAT-DEPLOY.
+Job/Scheduler ранее подтвердили heartbeat и успешное выполнение; повторный сбор
+источника после истечения интервала остаётся отдельной облачной проверкой.
+
+## Новая очередь: карта и участники ЖК · 19 октября
+
+Реализация B из [PR #23](https://github.com/arturk0-0/3a-saq-qurylys/pull/23)
+и карта A интегрированы через PR #25 после review/CI.
+[Отчёт B](company-profiles-report.md), [контракты](company-api.md).
+Чекбоксы ниже относятся к реализации и локальной интеграции; публикация и
+проверка реальных данных выделены отдельно.
+[Разделение и промпты](tasks/map-company-split.md).
+A работает без облачных кабинетов/ключей; B делает всю сложную интеграцию и frontend компаний.
+
+- [x] **MAP-01–06 · A** — [#20](https://github.com/arturk0-0/3a-saq-qurylys/issues/20):
+  вторичный сворачиваемый блок в реестре ЖК, Leaflet/OSM, одинаковые объёмные здания
+  на известных координатах, адрес/переход к ЖК. Без процентов готовности. Lazy loading,
+  mobile/keyboard/empty/error, тесты и handoff; backend/компании A не меняет.
+- [x] **ORG-01–05 · B** — [#21](https://github.com/arturk0-0/3a-saq-qurylys/issues/21):
+  исследование открытых источников, идентификация по БИН, отдельные роли юридического
+  застройщика/уполномоченной компании, provenance каждого факта, ограниченные адаптеры,
+  хранение/защищённый API. Количество завершённых объектов только с перечнем/границами охвата.
+- [x] **ORG-06 · B** — блок двух организаций в карточке ЖК, отдельные страницы компаний,
+  компактные ссылки на конкретные источники возле значений, даты/неизвестное/расхождения.
+- [ ] **GEO-01 · B** — достоверные реальные ЖК/адреса/координаты с источником и точностью;
+  не привязывать реальные компании к DEMO-записям и не подменять стройку офисом продаж.
+- [x] **ORG-07–08 · B** — проверки, отчёт, review/CI и интеграция с картой A.
+  Публикация API/Hosting — отдельный шаг. Реализация PR #19 со сверкой реестров сохранена в #25;
+  не повторять готовую реализацию и не считать merge облачным выпуском.
+
+Общие frontend файлы разделены явно: A — city-map/** и ComplexList.tsx,
+B — company frontend, ComplexDetail.tsx, routes и shared types. Старые A-01–04 выполнены.
+R1–R6/auth/rules не меняются, платные AI/SearchAPI запросы не нужны.
+
+## 1. Главный результат и фактическое состояние
+
+Цель продукта: **находить публичную рекламу → сохранять оригиналы/ревизии →
+выделять возможные признаки риска → передавать эксперту → подтверждать факты →
+формировать сигнал/PDF**. Ручной ввод — дополнительный путь, не замена мониторингу.
+ИИ не устанавливает незаконность; отсутствие данных не становится R1.
+
+- Базовые модули, Gemini text/image, ручные решения, сигналы/PDF, читаемый UI и
+  «Рекламный след» уже в `main` / `ed38f00`: PR #5/#6/#7/#11/#10/#12.
+  Повторно их не разрабатывать. CI main зелёный, 345 backend + 11 SDK tests,
+  64 frontend tests, локальный Chromium — 16 групп/658 запросов.
+- Владелец сообщил, что выполнил команды обновления и открыл собранный сайт
+  17 октября. Это сообщение владельца, не автоматическая облачная приёмка Codex.
+- Мониторинг опубликован владельцем 18 октября: источники, Instagram/SearchAPI,
+  очередь, AI и экспертное решение проверены на живом сайте. Полный охват Instagram
+  не гарантируется. [Фактическая проверка Instagram](instagram-feasibility.md).
+- Старые P0-задачи закрыты ниже по существующей реализации и проверкам;
+  полноценные RU/KZ-измерения, независимый чистый запуск и выпуск остаются открыты.
+
+Обозначения: `[x]` — результат реализован/проверен с указанными ограничениями;
+`[ ]` — незавершённая работа или внешний prerequisite. Feature-ветка не означает
+публикацию сайта; моки/эмуляторы не означают облачную проверку.
+
+## 2. Сейчас: автоматический мониторинг (P0, B + разрешённый frontend B)
+
+- [x] **MON-IG-01** — проверить официальные способы сбора Instagram-таргета по
+  Казахстану, ограничения Meta API и фактический доступ из среды; записать источники.
+- [x] **MON-IG-02** — SearchAPI реально вернул KZ/Instagram:16 карточек по общему
+  запросу, включая предоставленный ID;4 по «квартиры Өскемен»,3 с пригодным текстом
+  ВКО. Ровно2 поиска, остаток98 из100. Адаптер/UI/защита резерва20 реализованы;
+  [факты и границы](instagram-searchapi.md). Cloud активация — открытый MON-09.
+- [x] **MON-01** — источники, ревизии публикаций, отдельная реальная очередь,
+  неизменяемый оригинал/ссылка/время/hash, серверные контракты и доступ аналитика.
+- [x] **MON-02** — рабочие публичные адаптеры: интернет-поиск и Telegram; строгие
+  лимиты/таймауты/ошибки, никакого обхода login/CAPTCHA. Поисковый фрагмент явно
+  отличается от полного поста и не объявляется таргетированной рекламой.
+- [x] **MON-03** — устранение дублей и сохранение изменённых версий; фильтр ВКО/жилья
+  с объяснениями и видимой неопределённостью, без автоматического юридического вывода.
+- [x] **MON-04** — автоматический Gemini по явному opt-in, не более одного анализа
+  за запуск источника, общие суточные квоты, идемпотентность и безопасная диагностика.
+- [x] **MON-05** — frontend: источники/ошибки/запуски и очередь находок, оригиналы,
+  AI-гипотезы, экспертные решения с причиной и сохранением заметок при конфликте.
+- [x] **MON-06** — связать подтверждённую экспертом находку с реальным ЖК и прежним
+  потоком доказательств, факторов и PDF. Реальные посты не привязывать к DEMO-объектам.
+- [x] **MON-07** — worker регулярного запуска, lease/конкурентность/квота, инструкция
+  Cloud Run Job/Scheduler и локальный режим без зависимости от открытого браузера.
+- [x] **MON-08** — подходящие unit/API/SDK/browser tests, документация и отдельный PR;
+  тестовые адаптеры и реальные HTTP-пробы обозначены, сторонние ключи не публикуются.
+- [x] **MON-09a** — владелец опубликовал API/Hosting/индексы, создал worker и hourly
+  Scheduler; execution `saq-qurylys-monitor-ltms7` завершился успешно, heartbeat виден.
+- [ ] **MON-09b** — подтвердить следующий фактический сбор по расписанию после
+  наступления nextRunAt и новый run в истории, а не только успешный heartbeat.
+- [x] **REG-01 · B** — публичные кандидаты Homeportal/Ashyq, сверка применимого
+  разрешения/гарантии и исключение подтверждённой находки из активной очереди.
+  [Реализация и границы](registry-screening.md), [PR #19](https://github.com/arturk0-0/3a-saq-qurylys/pull/19).
+  Сервер/UI/SDK/Compose проверены; публикация остаётся REG-02.
+- [ ] **REG-02 · B + владелец** — после review/CI опубликовать API + Hosting и проверить
+  разрешение/гарантию в облаке; факторы R1–R6 остаются прежними.
+
+Реализация MON-01–08: [PR #14](https://github.com/arturk0-0/3a-saq-qurylys/pull/14),
+[отчёт с проверками и ограничениями](monitoring-report.md),
+[контракты/worker](monitoring.md), [активная задача #13](https://github.com/arturk0-0/3a-saq-qurylys/issues/13).
+После SearchAPI: 431 backend, 14 SDK/emulator, 72 frontend, build, 18 browser-групп.
+Это закрытие реализации в ветке, не human approval/merge/облачной приёмки.
+MON-IG-02 подтверждён коротким live trial и запуском владельца. MON-09b остаётся
+открыт. Полный охват Instagram не обещается, media автоматически не скачиваются.
+
+Публичные изображения/видео, Stories и закрытые аккаунты не считаются покрытыми
+текстовым сборщиком как файлы. Для Meta сохраняются только media references;
+дополнительный медиасбор требует отдельной проверки доступа,
+приватного хранения/лимитов и явного перечня поддерживаемых источников.
+
+## 3. Остаток проверок и выпуска
+
+- [x] **UX-01 · B, прямое поручение владельца 18 октября** — Упростить ежедневный UI,
+  убрать общий DEMO и надписи о стоимости, перенести Instagram/config из очереди,
+  скрыть UID авторов. [Проверки и границы](archive/reports/analyst-ui-report.md); реализация в своей
+  ветке, публикация Hosting отдельно. Локальные учебные пометки сохранены.
+
+
+Это реальные незакрытые пункты прежнего плана, а не отсутствующие CRUD-экраны.
+
+**Интеграция 17 октября:** очередь друга A-01–04 завершена и совмещена с MON
+в `release/integrated-monitoring-readiness`; main и живой сайт пока не обновлены.
+Сохранены его исправления черновиков/скриншотов, lazy-loading и материалы показа.
+[Отчёт интеграции и следующий шаг](archive/reports/integration-readiness-report.md),
+[исходный handoff A](frontend-handoff.md). Реализацию этих задач не повторять.
+
+- [ ] **PM-01 · B** — Confirm organisers' exact submission time, judge test procedure, expected drone criteria and any permitted public data sources.
+- [ ] **BE-13 · B** — Verify Firestore/Storage access control, no public document uploads, secret scanning, quotas and error handling.
+- [ ] **AI-06 · B** — Test Kazakh text, low-quality screenshot and harmless ad to identify false positives; record results.
+- [ ] **AI-08 · B** — Describe model/prompt/version, limits and measured behavior on unseen inputs in docs.
+- [ ] **QA-04 · B** — Fresh Git clone on a second device/account with Internet; prove `.env`/Firebase/Gemini configuration and local startup.
+- [x] **SEC-01 · B, локальная проверка** — Gitleaks 8.30.1 по всем доступным refs/full history не нашёл секретов; исторические пути credentials проверены, `.gitignore` закрывает локальные файлы. [Область проверки](archive/reports/security-release-check.md). Это не проверка cloud IAM или гарантия отсутствия персональных данных; BE-13 остаётся открыт.
+- [x] **DOC-01 · B, интеграционная ветка** — Материалы A включены, README указывает проверяемый кандидат, границы источников и актуальные инструкции; показ дополнен отдельным маршрутом MON. Облачная публикация отдельно.
+- [ ] **RELEASE-01 · B** — Approve green CI, correct README URLs; record immutable commit SHA; create submission tag.
+- [ ] **RELEASE-02 · B** — Switch repo from private to public **before** deadline; verify access without login; submit URL/commit as required.
+- [x] **PITCH-01 · A, материалы** — Подготовлены `pitch.md`, `demo-checklist.md`, обновлён runbook; происхождение существующих иллюстраций обозначено. Совмещены в интеграционной ветке.
+- [ ] **PITCH-02 · B, живой показ** — Пройти репетицию опубликованного SHA и записать резерв с приватно выданным доступом. Подготовленные тексты и локальный Chromium не закрывают этот пункт.
+
+До завершения MON и приёмки не добавлять новые P1/P2. Точное время сдачи/часовой
+пояс подтвердить у организаторов; ранее указанное 20 октября 23:59 — предположение,
+не подтверждённый дедлайн. Финальные tag/публичность репозитория — отдельные действия.
+
+## 4. Уже выполнено (baseline до MON)
+
+Доказательства: PR [#5](https://github.com/arturk0-0/3a-saq-qurylys/pull/5),
+[#6](https://github.com/arturk0-0/3a-saq-qurylys/pull/6),
+[#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7),
+[#11](https://github.com/arturk0-0/3a-saq-qurylys/pull/11), CI и отчёты
+[baseline](archive/reports/release-candidate-report.md), [UI](archive/reports/frontend-readability-report.md),
+[LINK](advertising-trace.md), [backend](archive/reports/backend-followup-report.md).
+Прежняя ручная облачная приёмка подтверждена владельцем. Закрытие реализации
+не закрывает оставшиеся измерения AI/проверку нового deployment/чистого устройства.
+
+<details>
+<summary>Выполненные задачи: 50</summary>
+
+- [x] **PM-02 · B** — Create initial project issues with owner, priority, acceptance criteria and a branch naming scheme.
+- [x] **FE-01 · A** — Set up Vite + React + strict TS, Tailwind, shadcn/ui, React Router, navigation shell and layout.
+- [x] **FE-02 · A** — Design reusable controls: risk badge, document status, evidence status, loading/error/empty states, confirmations.
+- [x] **FE-03 · A** — Overview dashboard with search, risk-zone filter, sort, quick link to ≥8 demo ЖК.
+- [x] **FE-04 · A** — Optional geo pins using Leaflet/OSM for complexes with coordinates; list view remains usable if maps fail.
+- [x] **FE-05 · A** — ЖК detail header: name, address, developer/BIN, stage, readiness, documentary basis and source.
+- [x] **FE-06 · A** — Advertisement feed with platform, account, date, source URL, screenshot and manual-add modal/form.
+- [x] **FE-07 · A** — Evidence tab; show exact AI-highlighted quote and ability to open full original material.
+- [x] **FE-08 · A** — Documents tab; basis type, status confirmed/disproved/unknown, reference and last checked time.
+- [x] **FE-09 · A** — Risk panel R1–R6 with scores, review statuses, breakdown and evidence links.
+- [x] **FE-10 · A** — AI proposal review: accept/reject separately from signal decision; show fresh computed score.
+- [x] **FE-11 · A** — Signal card with human Confirm / Return, reason, activity history and print/PDF actions.
+- [x] **FE-12 · A** — Verify responsive desktop layout (including 1366×768), keyboard accessibility, meaningful error/empty/loading states.
+- [x] **BE-01 · B** — FastAPI with `/api/v1/health`, settings, Pydantic, typed error response and CORS limited to expected local frontend origins.
+- [x] **BE-02 · B** — Configure Firebase Admin server-side; document safe credentials via `.env.example`; do not commit private keys.
+- [x] **BE-03 · B** — Firestore repository methods for developers, ЖК, advertisements, evidence, factors, signals, audit.
+- [x] **BE-04 · B** — Firebase Authentication email/password and server-side ID-token verification; demo analyst and optional admin role.
+- [x] **BE-05 · B** — Define `data/seed` and idempotent, non-destructive initialization of ≥8 fictional ЖК and ≥12 ads.
+- [x] **BE-06 · B** — List/filter details endpoints; validate VКО geography and missing fields; paginated and bounded queries.
+- [x] **BE-07 · B** — Advertisement manual creation and linking, typed request/response; fake source clearly marked DEMO.
+- [x] **BE-08 · B** — Private Firebase Storage uploads, file-size/type checks, evidence metadata with source/timestamp and optional SHA-256.
+- [x] **BE-09 · B** — Endpoint for proposed/confirmed/rejected factor decisions; verify analyst, evidence and atomic score update.
+- [x] **BE-10 · B** — Signals endpoints, human confirmation/return, reviewer+timestamp+reason in audit log.
+- [x] **BE-11 · B** — HTML/PDF report with demo watermark, verified factors/links/snapshots/reviewer, graceful font/system dependencies.
+- [x] **BE-12 · B** — Docker Compose builds/runs frontend/backend locally and uses *online* Firebase/Gemini; document commands.
+- [x] **RISK-01 · B** — Implement pure server-side `calculate_risk(factors)` with official R1–R6 weights; score capped at 100.
+- [x] **RISK-02 · B** — Zones GREEN 0–24 / RED ≥60 with R1+R2 / YELLOW otherwise, including ≥60 without R1+R2.
+- [x] **RISK-03 · B** — Ensure UNKNOWN/PROPOSED/REJECTED = 0 and inability to verify basis does not imply R1.
+- [x] **RISK-04 · B** — Unit tests for A=35/YELLOW, B=70/RED, C=10/GREEN and missing-source exception conditions.
+- [x] **AI-01 · B** — Design AI JSON extraction schema, prompting, source quote/candidate/confidence/uncertainty; Pydantic validation.
+- [x] **AI-02 · B** — Gemini server-side client, configurable model/API key, timeouts/retries/quota errors, no raw secrets in logs.
+- [x] **AI-03 · B** — Analyze **new** Russian ad text and detect paid reservation/deposit as *proposal* with exact excerpt.
+- [x] **AI-04 · B** — Analyze screenshot/image with Gemini; return structured terms, amount, source quote and uncertainty.
+- [x] **AI-05 · B** — Candidate match to known ЖК by name/aliases; ambiguous matches require analyst selection.
+- [x] **AI-07 · B** — Integrate proposal→review→confirmed factor; model must never automatically set legal confirmation/score.
+- [x] **INT-01 · B** — Freeze basic complex/ad/evidence/AI-result/score JSON contracts with sample fixtures.
+- [x] **INT-02 · B** — UI calls real backend/Firestore; no hidden stub response falsely presented as AI or live government data.
+- [x] **INT-03 · B** — Demonstrate from newly entered ad to reviewed R2, score, signal decision and PDF.
+- [x] **INT-04 · B** — Run three mandatory scenarios with corresponding demo objects, screenshots and expected scores.
+- [x] **QA-01 · B** — Backend pytest risk/auth/validation; no confirmed risk without evidence/reviewer.
+- [x] **QA-02 · A** — Frontend typecheck/build and core interaction tests, errors and empty states.
+- [x] **QA-03 · B** — CI checks Python style/tests and TS typecheck/build for each PR to main.
+- [x] **DOC-02 · B** — Add `docs/risk-rules.md`, `docs/ai-methodology.md` and API examples.
+- [x] **DOC-03 · B** — Add `docs/data-model.md`, `docs/architecture.md`, Firebase index/rules setup and system diagram.
+- [x] **DOC-04 · A** — Add `docs/demo-scenarios.md` with step-by-step clicks and expected results.
+- [x] **LINK-01 · B** — Normalize shared phone numbers (+7/8), WhatsApp URLs, website domains and alias names. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.
+- [x] **LINK-02 · B** — Propose ad-to-ad links with explicit evidence; optionally add image perceptual hashes / embedding similarity. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.
+- [x] **LINK-03 · B** — Persist proposed/confirmed/rejected links with provenance and reviewer/audit metadata. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.
+- [x] **LINK-04 · A** — Show related ads/accounts in a graph or clear list; navigate directly to shared evidence. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.
+- [x] **LINK-05 · B** — Demonstrate two fictional accounts sharing a number; do not infer common ownership or change base R1–R6 scoring. Review/merge: [#7](https://github.com/arturk0-0/3a-saq-qurylys/pull/7); локальный сценарий с тестовыми адаптерами, облачный rollout отдельно.
+
+</details>
+
+## 5. Дрон-инспекция · новый запрос владельца, 20 октября
+
+B по прямому запросу реализует весь модуль и его frontend; карту A не меняет.
+Код подготовлен в `feat/drone-photo-inspections`,
+[PR #24](https://github.com/arturk0-0/3a-saq-qurylys/pull/24) поверх сохранённого PR #23/#19.
+Проверены 527 backend, 100 frontend, 18 native SDK, Chromium и CI функционального SHA.
+[Контракты](drone-api.md), [фактический отчёт](drone-inspection-report.md).
+Публикация и проверка реальной моделью — отдельно; при разработке платных вызовов нет.
+Review/CI/merge завершены в PR #25; локальный browser workflow также проверен.
+Настоящий Gemini и облачная загрузка в этом выпуске не проверялись.
+
+
+- [x] **DRONE-01 · B** — Own private Storage/backend upload contract; B implements the requested frontend; original photos remain private.
+- [x] **DRONE-02 · B** — Configurable visual checklist; exact normative criteria still pending organisers; Gemini classifies `visible / not_visible / uncertain`.
+- [x] **DRONE-03 · B** — Show marked results and human review; no claim of confirmed noncompliance on one photograph.
+- [x] **DRONE-04 · B** — Save separate inspection report/evidence trail; do not touch core advertising-law score.
+
+## 6. Работа команды и Git
+
+- База новой работы — свежий `origin/main`, своя feature-ветка, небольшие проверенные
+  коммиты, push и PR. Без direct/force push main; review и зелёный CI перед merge.
+- B сейчас ведёт всю MON-вертикаль по прямой команде владельца; A может продолжать
+  независимые пользовательские материалы/QA, не менять одновременно MON-файлы.
+- Новые источники/API описывать честно. Нет доступа/403/пустая выдача — разные
+  состояния. Не записывать «объявлений нет», когда источник не прочитан.
+- В `WORK_LOG.md` — фактический итог/проверки/следующий шаг, в этом плане — статус.
+  Завершение MON в feature-ветке и публикация в облаке отмечаются раздельно.
+- R1–R6 и сценарии A=35/YELLOW, B=70/RED, C=10/GREEN не меняются.
+
+Контекст и границы: [PROJECT_SPEC](PROJECT_SPEC.md), [AGENTS](../AGENTS.md),
+[команда](two-person-team.md), [публикация](cloud-deployment.md).
+Полный прежний план с историческими датами/инструкциями сохранён в
+[архиве](archive/DEVELOPMENT_PLAN-2026-10-17-before-monitoring.md);
+его старые чекбоксы не являются активной очередью.
