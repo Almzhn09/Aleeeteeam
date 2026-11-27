@@ -13,13 +13,14 @@ from app.marketlens.settings import MarketLensSettings
 from app.marketlens.store import MarketStore
 
 
-def refresh_analytics(store: MarketStore) -> dict[str, int | bool]:
+def refresh_analytics(store: MarketStore) -> dict[str, int | bool | dict[str, int]]:
     output = analyze_store(store, computed_at=datetime.now(UTC))
     return {
         "scannedCount": output["listings"],
         "scanLimited": output["scanLimited"],
         "savedResults": output["savedResults"],
         "savedGroups": output["savedStats"],
+        "modelsNeedingSamples": output["modelsNeedingSamples"],
     }
 
 
