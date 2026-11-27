@@ -54,7 +54,7 @@ export function MarketHome() {
     <section className="ml-hero">
       <div className="ml-hero-text">
         <p className="ml-kicker"><BarChart3 size={18} aria-hidden="true" /> Аналитика объявлений Казахстана</p>
-        <h1>Умный поиск <em>выгодных</em> и <em>безопасных</em> предложений</h1>
+        <h1>Умный поиск <em>выгодных</em> предложений</h1>
         <p className="ml-lead">Анализируем объявления OLX: сравниваем цену с похожими предложениями,
           находим выгодные и показываем признаки, которые стоит проверить.</p>
         <form className="ml-search" role="search" onSubmit={search}>
