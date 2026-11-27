@@ -1,4 +1,4 @@
-"""Collect one authorized OLX category page, import it, and refresh MarketLens."""
+"""Collect an authorized OLX category, import it, and refresh MarketLens."""
 
 import argparse
 import json
@@ -24,13 +24,17 @@ def main() -> None:
     parser.add_argument(
         "--category", choices=OLX_SECTIONS, default="phones", help="OLX category to collect"
     )
+    parser.add_argument("--pages", type=int, default=1, help="Maximum OLX pages (1–3)")
+    parser.add_argument("--query", help="Optional model name within the selected category")
     args = parser.parse_args()
     if not args.authorized:
         parser.error("--authorized is required to collect from OLX")
     try:
-        request = CollectionRequest(category=args.category, limit=args.limit)
+        request = CollectionRequest(
+            category=args.category, limit=args.limit, pages=args.pages, query=args.query
+        )
     except ValidationError:
-        parser.error("--limit must be between 1 and 1000")
+        parser.error("Use --limit 1–1000, --pages 1–3 and a model name with letters or numbers.")
 
     settings = MarketLensSettings()
     if not settings.firebase_enabled:

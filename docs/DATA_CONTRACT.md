@@ -30,7 +30,7 @@
 ```
 
 Адаптер `ListingParser` объявляет `source` и `collect(request)`, возвращающий
-Iterable[Listing]. `CollectionRequest` передаёт category и limit. Парсер
+Iterable[Listing]. `CollectionRequest` передаёт category, limit, pages (от 1 до 3, по умолчанию 1) и необязательный query. Парсер
 возвращает только проверяемые нормализованные записи, ограничивает выдачу,
 дедуплицирует по ID и сообщает о недоступности источника ошибкой. Оригинальная
 ссылка HTTPS принадлежит указанному источнику. sellerId сохраняется только
@@ -78,7 +78,8 @@ sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 
 Префикс /api/v1/market; Firebase Bearer. GET /listings принимает q, category, subcategory,
 city, minPrice, maxPrice, source, view=all|deals|risk, sort=default|newest|price_asc|price_desc, limit, offset.
-Для сортировки по цене сначала идут объявления с известной ценой в KZT, затем остальные. Возвращает
+Для сортировки по цене сначала идут объявления с известной ценой в KZT, затем остальные.
+По умолчанию deals упорядочен по убыванию dealScore, risk — по убыванию riskScore. Возвращает
 {items, nextOffset, scannedCount, scanLimited}; каждый item — {listing, analysis}.
 GET /listings/{id} возвращает такой же item.
 GET /listings/{id}/history отдаёт {items, truncated}, каждый снимок содержит

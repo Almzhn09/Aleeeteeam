@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 import httpx
 from pydantic import ValidationError
@@ -214,7 +214,7 @@ def _normalize(
 
 
 class OLXParser:
-    """One category page per collection, with a new observation time on each run."""
+    """Up to three pages of one category per collection, with a new observation time on each run."""
 
     source: Source = "olx"
 
@@ -228,9 +228,31 @@ class OLXParser:
             raise ValueError("OLX: поддерживаются electronics/phones и electronics/laptops")
         if not self._authorized:
             raise OLXSourceError("OLX: требуется подтверждённое разрешение на сбор категории")
+        url = OLX_SECTIONS[section]
+        if request.query:
+            slug = "-".join(request.query.split()).strip("-")
+            if not any(character.isalnum() for character in slug):
+                raise ValueError("OLX: строка поиска должна содержать название модели")
+            url = f"{url}q-{quote(slug, safe='')}/"
+        scraped_at = datetime.now(UTC)
+        unique: dict[str, Listing] = {}
+        for page in range(1, request.pages + 1):
+            rows = self._collect_page(url, section, page, scraped_at)
+            if not rows:
+                break
+            for row in rows:
+                unique.setdefault(row.id, row)
+                if len(unique) == request.limit:
+                    return list(unique.values())
+        return list(unique.values())
+
+    def _collect_page(
+        self, url: str, section: str, page: int, scraped_at: datetime
+    ) -> list[Listing]:
         try:
             response = self._client.get(
-                OLX_SECTIONS[section],
+                url,
+                params={"page": page} if page > 1 else None,
                 headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
                 follow_redirects=False,
                 timeout=15,
@@ -248,14 +270,11 @@ class OLXParser:
         cards.feed(response.text)
         cards.close()
         images = _offer_images(cards.embedded)
-        scraped_at = datetime.now(UTC)
-        unique: dict[str, Listing] = {}
-        for card in cards.cards:
-            listing = _normalize(card, scraped_at, images, section)
-            if listing is not None:
-                unique.setdefault(listing.id, listing)
-                if len(unique) == request.limit:
-                    break
-        if not unique and (cards.cards or not cards.empty):
-            raise OLXSourceError("OLX: не найдены распознаваемые карточки категории")
-        return list(unique.values())
+        rows = [
+            listing
+            for card in cards.cards
+            if (listing := _normalize(card, scraped_at, images, section)) is not None
+        ]
+        if not rows and (cards.cards or not cards.empty):
+            raise OLXSourceError(f"OLX: на странице {page} не найдены распознаваемые карточки")
+        return rows

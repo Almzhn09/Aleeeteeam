@@ -258,3 +258,52 @@ def test_laptop_collection_uses_an_explicit_category_url():
     assert listing.category == "electronics"
     assert listing.subcategory == "laptops"
     assert listing.price == 120000
+
+
+def test_paginated_collection_deduplicates_and_stops_at_the_limit():
+    pages = []
+    one = synthetic_card("/d/obyavlenie/test-IDTest1.html", "Телефон 1", "85 000 тг.")
+    two = synthetic_card("/d/obyavlenie/test-IDTest2.html", "Телефон 2", "90 000 тг.")
+
+    def respond(request):
+        page = request.url.params.get("page")
+        pages.append(page)
+        return html(one if page is None else one + two)
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        parser = OLXParser(client, authorized=True)
+        listings = parser.collect(CollectionRequest(category="phones", limit=2, pages=3))
+
+    assert pages == [None, "2"]
+    assert [listing.id for listing in listings] == ["olx:Test1", "olx:Test2"]
+    assert listings[0].scraped_at == listings[1].scraped_at
+
+
+def test_paginated_collection_reports_a_later_source_failure():
+    card = synthetic_card("/d/obyavlenie/test-IDTest1.html", "Телефон", "85 000 тг.")
+
+    def respond(request):
+        return httpx.Response(403) if request.url.params.get("page") else html(card)
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(OLXSourceError, match="HTTP 403"):
+            OLXParser(client, authorized=True).collect(
+                CollectionRequest(category="phones", limit=2, pages=2)
+            )
+
+
+def test_model_query_is_encoded_inside_the_selected_category():
+    card = synthetic_card("/d/obyavlenie/test-IDTest1.html", "Айфон 13", "85 000 тг.")
+
+    def respond(request):
+        assert request.url.host == "www.olx.kz"
+        assert request.url.path.endswith("/mobilnye-telefony-smartfony/q-Айфон-13/")
+        return html(card)
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        parser = OLXParser(client, authorized=True)
+        assert parser.collect(CollectionRequest(category="phones", query="Айфон 13"))
+        with pytest.raises(ValueError, match="название модели"):
+            parser.collect(CollectionRequest(category="phones", query="---"))
+        with pytest.raises(ValueError, match="pattern"):
+            CollectionRequest(category="phones", query="../noutbuki")

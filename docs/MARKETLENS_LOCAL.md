@@ -74,7 +74,8 @@ uv run --frozen python -m app.marketlens.refresh_analytics
 сбор, импорт и расчёт. Для неё нужны те же backend-переменные. По умолчанию
 собираются телефоны. Для ноутбуков добавьте `--category laptops`; на дашборде
 появится отдельная статистика. Сравнение конкретных моделей по-прежнему
-применяется к телефонам.
+применяется к телефонам. Чтобы собрать более сопоставимую выборку по модели,
+укажите `--query 'iphone 13' --pages 2 --limit 60`.
 
 ```bash
 uv run --frozen python -m app.marketlens.update_olx --authorized --limit 30

@@ -70,6 +70,8 @@ class Listing(MarketModel):
 class CollectionRequest(MarketModel):
     category: str = Field(min_length=1, max_length=120)
     limit: int = Field(default=100, ge=1, le=1000)
+    pages: int = Field(default=1, ge=1, le=3)
+    query: str | None = Field(default=None, min_length=1, max_length=80, pattern=r"^[\w -]+$")
 
 
 class ListingParser(Protocol):
