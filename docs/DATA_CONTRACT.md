@@ -72,14 +72,18 @@ MarketStats с dataset, computedAt, comparableGroup, category, currency,
 sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 (массив min/max/count). `ingestionRuns` зарезервирована под итог запуска
 (source, startedAt, finishedAt, status, collectedCount, uniqueCount).
-P2 история — упорядоченные снимки с временем, ценой и валютой.
+История — упорядоченные снимки с временем, ценой и валютой.
 
 ## HTTP
 
 Префикс /api/v1/market; Firebase Bearer. GET /listings принимает q, category,
-city, minPrice, maxPrice, source, view=all|deals|risk, limit, offset. Возвращает
+city, minPrice, maxPrice, source, view=all|deals|risk, sort=default|newest|price_asc|price_desc, limit, offset.
+Для сортировки по цене сначала идут объявления с известной ценой в KZT, затем остальные. Возвращает
 {items, nextOffset, scannedCount, scanLimited}; каждый item — {listing, analysis}.
-GET /listings/{id} возвращает такой же item. GET /stats возвращает
+GET /listings/{id} возвращает такой же item.
+GET /listings/{id}/history отдаёт {items, truncated}, каждый снимок содержит
+scrapedAt, price и currency. По умолчанию 20 последних снимков, от новых к старым.
+Параметр limit принимает значения от 1 до 100. GET /stats возвращает
 {items, truncated}. POST /listings/{id}/explanation возвращает
 {provider, summary, insights, recommendations, limitations}. provider —
 local или gemini. В MVP поиск/фильтры работают по первым 1000 реальных записям

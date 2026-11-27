@@ -12,8 +12,8 @@ Firebase-проект MarketLens, выставьте `MARKETLENS_FIREBASE_ENABLE
 роль `analyst` или `admin` пользователю и выдайте серверу учётные данные
 для этого проекта. Для установки роли из `backend/` выполните
 `uv run --frozen python -m app.cli.role UID analyst --marketlens --project-confirm PROJECT_ID`.
-Укажите ID выделенного проекта. Развёртывайте Firestore rules
-с явным `--project` MarketLens. Сервер доверяет Firebase ID-токенам
+Укажите ID выделенного проекта. Примените правила и индекс истории к выделенному проекту:
+`firebase deploy --only firestore --config firebase.marketlens.local.json --project PROJECT_ID`. Сервер доверяет Firebase ID-токенам
 этого проекта и пишет в него через Admin SDK.
 
 В терминале из корня запустите backend:

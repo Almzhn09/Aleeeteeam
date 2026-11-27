@@ -36,6 +36,13 @@ def test_market_store_keeps_snapshots_and_matches_current_analysis(db):
     assert len(list(db.collection("listingSnapshots").stream())) == 3
     assert store.scan_listings() == ([latest], False)
     assert store.get_listing(fixture.id) is None
+    history = store.price_history(row.id, 2)
+    assert not history.truncated
+    assert [(item.scraped_at, item.price) for item in history.items] == [
+        (latest.scraped_at, 80000),
+        (row.scraped_at, 85000),
+    ]
+    assert store.price_history(row.id, 1).truncated
 
     result = AnalysisResult(
         listing_id=latest.id,

@@ -6,7 +6,14 @@ from google.api_core.exceptions import GoogleAPIError
 from app.api.dependencies import CurrentUser, get_runtime
 from app.core.errors import AppError, IntegrationUnavailable, NotFound
 from app.core.firebase import FirebaseRuntime
-from app.marketlens.contracts import Listing, ListingItem, ListingPage, Source, StatsPage
+from app.marketlens.contracts import (
+    Listing,
+    ListingItem,
+    ListingPage,
+    PriceHistory,
+    Source,
+    StatsPage,
+)
 from app.marketlens.explanation import ExplanationResponse, explain
 from app.marketlens.store import MarketStore
 
@@ -59,6 +66,7 @@ def catalog(
     min_price: Annotated[float | None, Query(alias="minPrice", ge=0, allow_inf_nan=False)] = None,
     max_price: Annotated[float | None, Query(alias="maxPrice", ge=0, allow_inf_nan=False)] = None,
     view: Literal["all", "deals", "risk"] = "all",
+    sort: Literal["default", "newest", "price_asc", "price_desc"] = "default",
     limit: Annotated[int, Query(ge=1, le=100)] = 24,
     offset: Annotated[int, Query(ge=0, le=1000)] = 0,
 ) -> ListingPage:
@@ -79,6 +87,15 @@ def catalog(
                 max_price=max_price,
             )
         ]
+        if sort == "newest":
+            listings.sort(key=lambda listing: listing.scraped_at, reverse=True)
+        elif sort in {"price_asc", "price_desc"}:
+            priced = [
+                item for item in listings if item.currency == "KZT" and item.price is not None
+            ]
+            priced_ids = {item.id for item in priced}
+            priced.sort(key=lambda item: item.price or 0, reverse=sort == "price_desc")
+            listings = priced + [item for item in listings if item.id not in priced_ids]
         if view == "all":
             items = store.with_analysis(listings[offset : offset + limit])
             total = len(listings)
@@ -119,6 +136,21 @@ def listing_item(store: MarketStore, listing_id: str) -> ListingItem:
 @router.get("/listings/{listing_id}", response_model=ListingItem)
 def detail(listing_id: ListingId, user: CurrentUser, store: Store) -> ListingItem:
     return listing_item(store, listing_id)
+
+
+@router.get("/listings/{listing_id}/history", response_model=PriceHistory)
+def history(
+    listing_id: ListingId,
+    user: CurrentUser,
+    store: Store,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> PriceHistory:
+    try:
+        if store.get_listing(listing_id) is None:
+            raise NotFound()
+        return store.price_history(listing_id, limit)
+    except GoogleAPIError:
+        raise IntegrationUnavailable("MarketLens Firestore") from None
 
 
 @router.get("/stats", response_model=StatsPage)

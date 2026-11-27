@@ -8,7 +8,13 @@ from pydantic import ValidationError
 
 from app.api.dependencies import get_runtime
 from app.marketlens.api import market_store
-from app.marketlens.contracts import AnalysisResult, Listing, ListingItem
+from app.marketlens.contracts import (
+    AnalysisResult,
+    Listing,
+    ListingItem,
+    PriceHistory,
+    PriceObservation,
+)
 from app.marketlens.explanation import explain
 from app.marketlens.main import create_marketlens_app
 from app.marketlens.settings import MarketLensSettings
@@ -74,6 +80,13 @@ class Store:
             for row in rows
         ]
 
+    def price_history(self, listing_id, limit):
+        assert listing_id == "olx:42" and limit == 1
+        return PriceHistory(
+            items=[PriceObservation(scraped_at=WHEN, price=85000, currency="KZT")],
+            truncated=True,
+        )
+
     def get_stats(self):
         return [], False
 
@@ -93,6 +106,20 @@ def test_routes_authorize_filter_and_explain():
         ).json()
         assert page["nextOffset"] == 1
         assert page["items"][0]["listing"]["externalId"] == "42"
+        cheap = client.get("/api/v1/market/listings?sort=price_asc&limit=1", headers=HEADERS)
+        assert cheap.json()["items"][0]["listing"]["externalId"] == "43"
+        expensive = client.get("/api/v1/market/listings?sort=price_desc&limit=1", headers=HEADERS)
+        assert expensive.json()["items"][0]["listing"]["externalId"] == "42"
+        history = client.get("/api/v1/market/listings/olx:42/history?limit=1", headers=HEADERS)
+        assert history.json() == {
+            "items": [{"scrapedAt": "2026-11-27T00:00:00Z", "price": 85000, "currency": "KZT"}],
+            "truncated": True,
+        }
+        assert client.get("/api/v1/market/listings/olx:42/history?limit=1").status_code == 401
+        assert (
+            client.get("/api/v1/market/listings/olx:missing/history", headers=HEADERS).status_code
+            == 404
+        )
         for view in ("deals", "risk"):
             response = client.get(
                 "/api/v1/market/listings",

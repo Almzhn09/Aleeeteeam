@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useApiQuery } from '@/lib/useApiQuery'
 import { errorMessage } from '@/lib/labels'
+import { ListingHistory } from './dashboard/ListingHistory'
 import { MarketDistribution } from './dashboard/MarketDistribution'
 import { PriceComparison } from './dashboard/PriceComparison'
 import { formatPrice, marketNumber } from './dashboard/format'
@@ -85,6 +86,10 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
       </select></FormField>
       <FormField label="От, ₸"><input name="minPrice" type="number" min={0} step="any" /></FormField>
       <FormField label="До, ₸"><input name="maxPrice" type="number" min={0} step="any" /></FormField>
+      <FormField label="Сортировка"><select name="sort">
+        <option value="">По умолчанию</option><option value="newest">Свежие наблюдения</option>
+        <option value="price_asc">Сначала дешевле, ₸</option><option value="price_desc">Сначала дороже, ₸</option>
+      </select></FormField>
       <Button type="submit">Найти</Button>
     </form>
     {query.loading && <LoadingState />}
@@ -129,25 +134,28 @@ export function MarketListing() {
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
     {query.data && <div className="grid gap-4 lg:grid-cols-2">
       <ListingCard item={query.data} detailed />
-      <section className="panel content-pad space-y-3">
-        <h2 className="text-lg font-semibold">Пояснение оценки</h2>
-        <Button disabled={pending} onClick={() => { void requestExplanation() }}>
-          {pending ? 'Загружаем…' : 'Получить пояснение'}
-        </Button>
-        {error && <p role="alert">{error}</p>}
-        {explanation && <div className="space-y-2" aria-live="polite">
-          <p className="text-sm text-muted-foreground">{explanation.provider === 'gemini' ? 'Пояснение Gemini' : 'Локальное пояснение'}</p>
-          <p>{explanation.summary}</p>
-          {[
-            ['Наблюдения', explanation.insights],
-            ['Рекомендации', explanation.recommendations],
-            ['Ограничения', explanation.limitations],
-          ].map(([heading, lines]) => Array.isArray(lines) && lines.length > 0 && <div key={String(heading)}>
-            <h3 className="font-semibold">{heading}</h3>
-            <ul className="list-disc pl-5">{lines.map((line, index) => <li key={index}>{line}</li>)}</ul>
-          </div>)}
-        </div>}
-      </section>
+      <div className="grid content-start gap-4">
+        {path && <ListingHistory path={path} />}
+        <section className="panel content-pad space-y-3">
+          <h2 className="text-lg font-semibold">Пояснение оценки</h2>
+          <Button disabled={pending} onClick={() => { void requestExplanation() }}>
+            {pending ? 'Загружаем…' : 'Получить пояснение'}
+          </Button>
+          {error && <p role="alert">{error}</p>}
+          {explanation && <div className="space-y-2" aria-live="polite">
+            <p className="text-sm text-muted-foreground">{explanation.provider === 'gemini' ? 'Пояснение Gemini' : 'Локальное пояснение'}</p>
+            <p>{explanation.summary}</p>
+            {[
+              ['Наблюдения', explanation.insights],
+              ['Рекомендации', explanation.recommendations],
+              ['Ограничения', explanation.limitations],
+            ].map(([heading, lines]) => Array.isArray(lines) && lines.length > 0 && <div key={String(heading)}>
+              <h3 className="font-semibold">{heading}</h3>
+              <ul className="list-disc pl-5">{lines.map((line, index) => <li key={index}>{line}</li>)}</ul>
+            </div>)}
+          </div>}
+        </section>
+      </div>
     </div>}
   </>
 }
