@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+from app.marketlens.analytics import ALGORITHM_VERSION
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats
 from app.marketlens.refresh_analytics import refresh_analytics
 from app.marketlens.store import MarketStore
@@ -48,10 +49,19 @@ def test_market_store_keeps_snapshots_and_matches_current_analysis(db):
         listing_id=latest.id,
         listing_scraped_at=latest.scraped_at,
         computed_at=latest.scraped_at,
-        algorithm_version="test-v1",
+        algorithm_version=ALGORITHM_VERSION,
         market_price=100000,
         sample_size=12,
     )
+    assert store.save_analysis(
+        result.model_copy(
+            update={
+                "algorithm_version": "v1",
+                "computed_at": scraped_at,
+            }
+        )
+    )
+    assert store.with_analysis([latest])[0].analysis is None
     assert store.save_analysis(result)
     assert not store.save_analysis(result.model_copy(update={"listing_scraped_at": scraped_at}))
     assert store.with_analysis([latest])[0].analysis == result

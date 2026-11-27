@@ -3,6 +3,7 @@ from hashlib import sha256
 
 from firebase_admin import firestore
 
+from app.marketlens.analytics import ALGORITHM_VERSION
 from app.marketlens.contracts import (
     AnalysisResult,
     Listing,
@@ -134,7 +135,9 @@ class MarketStore:
         for listing in listings:
             result = results.get(listing.id)
             if result is not None and (
-                result.listing_id != listing.id or result.listing_scraped_at != listing.scraped_at
+                result.listing_id != listing.id
+                or result.listing_scraped_at != listing.scraped_at
+                or result.algorithm_version != ALGORITHM_VERSION
             ):
                 result = None
             items.append(ListingItem(listing=listing, analysis=result))

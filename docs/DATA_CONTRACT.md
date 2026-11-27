@@ -41,7 +41,7 @@ Iterable[Listing]. `CollectionRequest` передаёт category и limit. Па�
   "listingId": "olx:fixture-42",
   "listingScrapedAt": "2026-11-27T09:00:00Z",
   "computedAt": "2026-11-27T09:05:00Z",
-  "algorithmVersion": "v1",
+  "algorithmVersion": "v2",
   "comparableGroup": "phones:example:used:almaty:KZT",
   "marketPrice": 100000,
   "priceDeviationPercent": -15,
@@ -67,7 +67,7 @@ riskLevel: unknown | low | medium | high. Положительное savingsAmou
 `listings/{id}` содержит Listing. `listingSnapshots` хранит listingId,
 scrapedAt, dataset, price и currency отдельно от исходной карточки.
 `analysisResults/{id}` содержит AnalysisResult, связанный с scrapedAt.
-API возвращает analysis=null при несовпадении версии. `marketStats` хранит
+API возвращает analysis=null при несовпадении версии снимка или алгоритма. `marketStats` хранит
 MarketStats с dataset, computedAt, comparableGroup, category, currency,
 sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 (массив min/max/count). `ingestionRuns` зарезервирована под итог запуска
