@@ -12,10 +12,12 @@ from pydantic import ValidationError
 from app.marketlens.contracts import CollectionRequest, Listing, Source
 
 CATEGORY = "electronics"
-CATEGORY_URL = "https://www.olx.kz/elektronika/telefony-i-aksesuary/mobilnye-telefony/"
+CATEGORY_URL = "https://www.olx.kz/elektronika/telefony-i-aksesuary/mobilnye-telefony-smartfony/"
 USER_AGENT = "MarketLens/1.0"
 DETAIL_PATH = re.compile(r"/d/(?:obyavlenie|ogoloshennya)/[^/]+-ID([A-Za-z0-9]+)\.html")
-PRICE = re.compile(r"([0-9]+(?: [0-9]{3})*)(?:[,.]([0-9]{1,2}))? (?:тг\.?|₸|KZT)", re.I)
+PRICE = re.compile(
+    r"([0-9]+(?: [0-9]{3})*)(?:[,.]([0-9]{1,2}))? (?:тг\.?|₸|KZT)(?:\s*Договорная)?", re.I
+)
 VOID_TAGS = set("area base br col embed hr img input link meta param source track wbr".split())
 
 
@@ -56,6 +58,8 @@ class _Cards(HTMLParser):
             capture = "title"
         if attrs.get("data-testid") == "ad-price":
             capture = "price"
+        if tag in {"style", "script"}:
+            capture = None
         self._tags.append((tag, capture))
 
     def handle_startendtag(self, tag, attrs):
