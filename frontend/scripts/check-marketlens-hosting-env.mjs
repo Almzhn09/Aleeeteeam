@@ -12,7 +12,8 @@ if (missing.length) {
 }
 
 const project = env.VITE_MARKETLENS_FIREBASE_PROJECT_ID
-if (!/^marketlens-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(project) ||
+const allowedProject = project === 'hackos20' || /^marketlens-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(project)
+if (!allowedProject ||
     project.length > 30 || project !== env.MARKETLENS_FIREBASE_PROJECT_ID) {
   console.error('Укажите один выделенный Firebase-проект MarketLens для API и Hosting.')
   process.exit(1)

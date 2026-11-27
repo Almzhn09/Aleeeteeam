@@ -153,6 +153,10 @@ def test_routes_authorize_filter_and_explain():
 def test_source_validation_and_isolated_settings(monkeypatch):
     monkeypatch.setenv("FIREBASE_PROJECT_ID", "saq-qurylys")
     assert MarketLensSettings(_env_file=None).firebase_project_id == "demo-marketlens-local"
+    assert (
+        MarketLensSettings(_env_file=None, firebase_project_id="hackos20").firebase_project_id
+        == "hackos20"
+    )
     with pytest.raises(ValidationError, match="dedicated MarketLens"):
         MarketLensSettings(_env_file=None, firebase_project_id="saq-qurylys")
     with pytest.raises(ValidationError, match="belong to the source"):

@@ -14,6 +14,6 @@ class MarketLensSettings(Settings):
     @field_validator("firebase_project_id")
     @classmethod
     def marketlens_project(cls, value: str) -> str:
-        if not value.startswith(("marketlens-", "demo-marketlens-")):
+        if value != "hackos20" and not value.startswith(("marketlens-", "demo-marketlens-")):
             raise ValueError("Use a dedicated MarketLens Firebase project ID")
         return value

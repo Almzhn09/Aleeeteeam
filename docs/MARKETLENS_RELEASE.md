@@ -1,13 +1,18 @@
 # Облачный релиз MarketLens
 
 Для репетиции используйте [локальное окружение](MARKETLENS_LOCAL.md).
-Для облачной публикации нужен отдельный проект с ID `marketlens-…`,
-включёнными Firebase Auth (Email/Password), Firestore, Hosting, Cloud Run,
+Для облачной публикации используйте проект `hackos20` или отдельный проект
+с ID `marketlens-…`. Для выпуска нужны
+Firebase Auth (Email/Password), Firestore, Hosting, Cloud Run,
 Cloud Build и Artifact Registry. Укажите выделенную серверную учётную запись
 с доступом к Firestore и чтению пользователей Firebase Auth. Оператору,
 который назначает роль `analyst`, нужен отдельный доступ на изменение
 пользователей. Используйте Application Default Credentials или доверенную
 серверную идентичность. Ключи в Git и клиентской сборке не требуются.
+
+В `hackos20` Firestore уже находится в `nam5`. Это мультирегион базы.
+Для Cloud Run и Artifact Registry укажите поддерживаемый регион отдельно,
+например `us-central1`.
 
 ## Собрать и развернуть API
 
