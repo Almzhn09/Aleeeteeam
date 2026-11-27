@@ -29,8 +29,8 @@ export function RiskBadge({ risk, confirmed = false }: { risk: Pick<RiskResult, 
 export function StatusBadge({ status, label }: { status: VerificationStatus; label?: string }) {
   return <span className={`status-badge status-${status}`}>{label || statusLabels[status]}</span>
 }
-export function DetailLink({ to, children }: { to: string; children: ReactNode }) {
-  return <Link to={to} className="detail-link">{children}<ArrowRight size={15} /></Link>
+export function DetailLink({ to, state, children }: { to: string; state?: unknown; children: ReactNode }) {
+  return <Link to={to} state={state} className="detail-link">{children}<ArrowRight size={15} /></Link>
 }
 export function FormField({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   const generatedId = useId()

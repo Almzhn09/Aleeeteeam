@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import {
   DetailLink, EmptyState, ErrorState, FormField, LoadingState, PageHeading, SourceLink,
 } from '@/components/WorkspaceUI'
@@ -20,7 +20,11 @@ const viewLabels = { all: 'Каталог', deals: 'Выгодные предл�
 const riskLabels: Record<RiskLevel, string> = {
   unknown: 'Не оценён', low: 'Низкий', medium: 'Средний', high: 'Высокий',
 }
-function ListingCard({ item, detailed = false }: { item: ListingItem; detailed?: boolean }) {
+const filterNames = ['q', 'category', 'city', 'source', 'minPrice', 'maxPrice', 'sort'] as const
+const pageSize = 24
+
+function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string }) {
+  const detailed = catalog === undefined
   const { listing, analysis } = item
   const image = listing.images.find(url => url.startsWith('https://'))
   return <article className="panel overflow-hidden">
@@ -48,7 +52,7 @@ function ListingCard({ item, detailed = false }: { item: ListingItem; detailed?:
         <ul className="list-disc pl-5">{analysis.riskReasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{reason.description}</li>)}</ul>
       </div>}
       <div className="flex flex-wrap gap-4">
-        {!detailed && <DetailLink to={`/listings/${encodeURIComponent(listing.id)}`}>Подробнее</DetailLink>}
+        {!detailed && <DetailLink to={`/listings/${encodeURIComponent(listing.id)}`} state={{ catalog }}>Подробнее</DetailLink>}
         <SourceLink url={listing.url} />
       </div>
     </div>
@@ -56,8 +60,15 @@ function ListingCard({ item, detailed = false }: { item: ListingItem; detailed?:
 }
 
 export function MarketCatalog({ view }: { view: CatalogView }) {
-  const [filters, setFilters] = useState('')
-  const [offset, setOffset] = useState(0)
+  const { pathname } = useLocation()
+  const [search, setSearch] = useSearchParams()
+  const filters = new URLSearchParams()
+  for (const name of filterNames) {
+    const value = search.get(name)
+    if (value) filters.set(name, value)
+  }
+  const rawOffset = search.get('offset') ?? ''
+  const offset = /^\d+$/.test(rawOffset) && Number(rawOffset) <= 1000 ? Number(rawOffset) : 0
   const params = new URLSearchParams(filters)
   params.set('view', view)
   params.set('offset', String(offset))
@@ -65,42 +76,55 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = new FormData(event.currentTarget)
     const values = new URLSearchParams()
-    for (const [key, value] of new FormData(event.currentTarget)) {
-      if (typeof value === 'string' && value.trim()) values.set(key, value.trim())
+    for (const name of filterNames) {
+      const value = form.get(name)
+      if (typeof value === 'string' && value.trim()) values.set(name, value.trim())
     }
-    setFilters(values.toString())
-    setOffset(0)
+    if (values.toString() === search.toString()) query.refresh()
+    else setSearch(values)
   }
+
+  function setOffset(next: number) {
+    const values = new URLSearchParams(filters)
+    if (next > 0) values.set('offset', String(next))
+    setSearch(values)
+  }
+
+  const catalog = search.size ? `${pathname}?${search}` : pathname
 
   return <>
     <PageHeading eyebrow="Рынок Казахстана" title={viewLabels[view]}
       description={view === 'risk' ? 'Признаки риска помогают выбрать, что проверить у продавца.' : 'Запрашиваемые цены и результаты сравнения предложений.'} />
-    <form onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <FormField label="Поиск"><input name="q" maxLength={120} type="search" /></FormField>
-      <FormField label="Категория"><input name="category" maxLength={120} /></FormField>
-      <FormField label="Город"><input name="city" maxLength={120} /></FormField>
-      <FormField label="Источник"><select name="source">
+    <form key={filters.toString()} onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <FormField label="Поиск"><input name="q" defaultValue={filters.get('q') ?? ''} maxLength={120} type="search" /></FormField>
+      <FormField label="Категория"><input name="category" defaultValue={filters.get('category') ?? ''} maxLength={120} /></FormField>
+      <FormField label="Город"><input name="city" defaultValue={filters.get('city') ?? ''} maxLength={120} /></FormField>
+      <FormField label="Источник"><select name="source" defaultValue={filters.get('source') ?? ''}>
         <option value="">Все источники</option><option value="olx">OLX</option>
         <option value="krisha">Krisha</option><option value="kolesa">Kolesa</option>
       </select></FormField>
-      <FormField label="От, ₸"><input name="minPrice" type="number" min={0} step="any" /></FormField>
-      <FormField label="До, ₸"><input name="maxPrice" type="number" min={0} step="any" /></FormField>
-      <FormField label="Сортировка"><select name="sort">
+      <FormField label="От, ₸"><input name="minPrice" defaultValue={filters.get('minPrice') ?? ''} type="number" min={0} step="any" /></FormField>
+      <FormField label="До, ₸"><input name="maxPrice" defaultValue={filters.get('maxPrice') ?? ''} type="number" min={0} step="any" /></FormField>
+      <FormField label="Сортировка"><select name="sort" defaultValue={filters.get('sort') ?? ''}>
         <option value="">По умолчанию</option><option value="newest">Свежие наблюдения</option>
         <option value="price_asc">Сначала дешевле, ₸</option><option value="price_desc">Сначала дороже, ₸</option>
       </select></FormField>
-      <Button type="submit">Найти</Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit">Найти</Button>
+        {filters.size > 0 && <Button type="button" variant="outline" onClick={() => setSearch({})}>Сбросить</Button>}
+      </div>
     </form>
     {query.loading && <LoadingState />}
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
     {query.data?.scanLimited && <p className="mb-3 text-sm" role="status">Поиск охватывает первые {query.data.scannedCount} объявлений.</p>}
     {query.data?.items.length === 0 && <EmptyState title="Объявления не найдены" />}
     {!!query.data?.items.length && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {query.data.items.map(item => <ListingCard key={item.listing.id} item={item} />)}
+      {query.data.items.map(item => <ListingCard key={item.listing.id} item={item} catalog={catalog} />)}
     </div>}
     {query.data && (offset > 0 || query.data.nextOffset !== null) && <div className="my-4 flex gap-3">
-      <Button disabled={offset === 0} variant="outline" onClick={() => setOffset(Math.max(0, offset - 24))}>Назад</Button>
+      <Button disabled={offset === 0} variant="outline" onClick={() => setOffset(Math.max(0, offset - pageSize))}>Назад</Button>
       <Button disabled={query.data.nextOffset === null} onClick={() => setOffset(query.data?.nextOffset ?? offset)}>Дальше</Button>
     </div>}
   </>
@@ -108,6 +132,10 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
 
 export function MarketListing() {
   const { id } = useParams()
+  const { state } = useLocation()
+  const previousCatalog = state?.catalog
+  const catalog = typeof previousCatalog === 'string' && /^\/(listings|deals|risk)(\?|$)/.test(previousCatalog)
+    ? previousCatalog : '/listings'
   const path = id ? `${apiPath}/listings/${encodeURIComponent(id)}` : null
   const query = useApiQuery<ListingItem>(path)
   const { api } = useAuth()
@@ -129,11 +157,11 @@ export function MarketListing() {
 
   return <>
     <PageHeading eyebrow="Каталог" title="Объявление" description="Цена, рыночное сравнение и исходная публикация."
-      action={<Link to="/listings">К каталогу</Link>} />
+      action={<Link to={catalog}>К каталогу</Link>} />
     {query.loading && <LoadingState />}
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
     {query.data && <div className="grid gap-4 lg:grid-cols-2">
-      <ListingCard item={query.data} detailed />
+      <ListingCard item={query.data} />
       <div className="grid content-start gap-4">
         {path && <ListingHistory path={path} />}
         <section className="panel content-pad space-y-3">

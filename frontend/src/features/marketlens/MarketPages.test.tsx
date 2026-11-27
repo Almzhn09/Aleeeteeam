@@ -57,6 +57,7 @@ describe('MarketLens workspace', () => {
     expect(within(history).getByText('Показаны последние 2 снимков.')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Получить пояснение' }))
     expect(await screen.findByText('Локальное пояснение')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'К каталогу' })).toHaveAttribute('href', '/listings?city=%D0%90%D0%BB%D0%BC%D0%B0%D1%82%D1%8B')
     expect(api).toHaveBeenCalledWith('/api/v1/market/listings/olx%3Atest/explanation', { method: 'POST' })
   })
 })
@@ -89,4 +90,35 @@ it('shows the server comparison and reasons on a deal without asking Gemini', as
   expect(await screen.findByRole('region', { name: 'Сравнение цены' })).toHaveTextContent('-15%')
   expect(screen.getByText('Цена заметно ниже медианы.')).toBeVisible()
   expect(api.mock.calls.every(([path]) => !String(path).endsWith('/explanation'))).toBe(true)
+})
+
+it('restores filters from a shared URL and keeps them when paging and returning', async () => {
+  const api = vi.fn().mockImplementation(async (path: string) => {
+    if (path.endsWith('/history')) return { items: [], truncated: false }
+    if (!path.includes('/listings?')) return row
+    const offset = new URL(path, 'https://test.invalid').searchParams.get('offset')
+    return { items: [row], nextOffset: offset === '24' ? 48 : null, scanLimited: false, scannedCount: 52 }
+  })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(),
+    signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/risk?city=Astana&sort=price_desc&offset=24']}>
+    <App marketLens />
+  </MemoryRouter></AuthContext.Provider>)
+
+  expect(await screen.findByLabelText('Город')).toHaveValue('Astana')
+  expect(screen.getByLabelText('Сортировка')).toHaveValue('price_desc')
+  fireEvent.click(await screen.findByRole('button', { name: 'Дальше' }))
+  await waitFor(() => expect(api).toHaveBeenLastCalledWith(
+    '/api/v1/market/listings?city=Astana&sort=price_desc&view=risk&offset=48', expect.any(Object),
+  ))
+  fireEvent.click(await screen.findByRole('link', { name: 'Подробнее' }))
+  const back = await screen.findByRole('link', { name: 'К каталогу' })
+  expect(back).toHaveAttribute('href', '/risk?city=Astana&sort=price_desc&offset=48')
+  fireEvent.click(back)
+  expect(await screen.findByLabelText('Город')).toHaveValue('Astana')
+  fireEvent.click(screen.getByRole('button', { name: 'Сбросить' }))
+  await waitFor(() => expect(api).toHaveBeenLastCalledWith(
+    '/api/v1/market/listings?view=risk&offset=0', expect.any(Object),
+  ))
 })
