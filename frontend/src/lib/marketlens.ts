@@ -52,6 +52,8 @@ export interface ListingPage {
   nextOffset: number | null
   scannedCount: number
   scanLimited: boolean
+  total?: number
+  subcategoryCounts?: Record<string, number>
 }
 
 export interface MarketStats {

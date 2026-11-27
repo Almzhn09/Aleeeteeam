@@ -71,8 +71,8 @@ class Store:
             listing("43", city="Астана", price=10000, subcategory="laptops"),
         ]
 
-    def scan_listings(self):
-        return self.rows, False
+    def iter_listings(self):
+        return iter(self.rows)
 
     def get_listing(self, listing_id):
         return next((row for row in self.rows if row.id == listing_id), None)
@@ -108,6 +108,8 @@ def test_routes_authorize_filter_and_explain():
             headers=HEADERS,
         ).json()
         assert page["nextOffset"] == 1
+        assert page["total"] == 2
+        assert page["subcategoryCounts"] == {"phones": 1, "laptops": 1}
         assert page["items"][0]["listing"]["externalId"] == "42"
         laptop_page = client.get("/api/v1/market/listings?subcategory=laptops", headers=HEADERS)
         assert [item["listing"]["id"] for item in laptop_page.json()["items"]] == ["olx:43"]

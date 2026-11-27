@@ -118,11 +118,16 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
     }
   }, [filterQuery])
   const rawOffset = search.get('offset') ?? ''
-  const offset = /^\d+$/.test(rawOffset) && Number(rawOffset) <= 1000 ? Number(rawOffset) : 0
+  const offset = /^\d+$/.test(rawOffset) && Number.isSafeInteger(Number(rawOffset)) ? Number(rawOffset) : 0
   const params = new URLSearchParams(filters)
   params.set('view', view)
   params.set('offset', String(offset))
   const query = useApiQuery<ListingPage>(`${apiPath}/listings?${params}`)
+  const availableCategories = new Set([...Object.keys(marketCategories),
+    ...Object.keys(query.data?.subcategoryCounts ?? {})])
+  const selectedCategory = filters.get('subcategory')
+  if (selectedCategory) availableCategories.add(selectedCategory)
+
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -152,7 +157,10 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
       {filters.has('category') && <input type="hidden" name="category" defaultValue={filters.get('category') ?? ''} />}
       <FormField label="Категория"><select name="subcategory" defaultValue={filters.get('subcategory') ?? ''}>
         <option value="">Все категории</option>
-        {Object.entries(marketCategories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        {[...availableCategories].map(key => <option key={key} value={key}>
+          {marketCategories[key] ?? key}{query.data?.subcategoryCounts?.[key] != null
+            ? ` (${query.data.subcategoryCounts[key]})` : ''}
+        </option>)}
       </select></FormField>
       <FormField label="Город"><input name="city" defaultValue={filters.get('city') ?? ''} maxLength={120} /></FormField>
       <FormField label="Источник"><select name="source" defaultValue={filters.get('source') ?? ''}>
@@ -174,6 +182,9 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
     {query.loading && <LoadingState />}
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
     {query.data?.scanLimited && <p className="mb-3 text-sm" role="status">Поиск охватывает первые {query.data.scannedCount} объявлений.</p>}
+    {query.data?.total != null && <p role="status" className="mb-3 text-sm">
+      Найдено: {marketNumber.format(query.data.total)}
+    </p>}
     {query.data?.items.length === 0 && <EmptyState title="Объявления не найдены" />}
     {!!query.data?.items.length && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {query.data.items.map(item => <ListingCard key={item.listing.id} item={item} catalog={catalog} />)}

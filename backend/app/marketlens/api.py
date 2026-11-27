@@ -34,7 +34,6 @@ def matches(
     *,
     q: str,
     category: str,
-    subcategory: str,
     city: str,
     source: Source | None,
     min_price: float | None,
@@ -42,7 +41,6 @@ def matches(
 ) -> bool:
     return (
         (not category or category == listing.category.casefold())
-        and (not subcategory or subcategory == (listing.subcategory or "").casefold())
         and (not city or city == (listing.city or "").casefold())
         and (source is None or source == listing.source)
         and (not q or q in f"{listing.title} {listing.description or ''}".casefold())
@@ -72,26 +70,32 @@ def catalog(
     view: Literal["all", "deals", "risk"] = "all",
     sort: Literal["default", "newest", "price_asc", "price_desc"] = "default",
     limit: Annotated[int, Query(ge=1, le=100)] = 24,
-    offset: Annotated[int, Query(ge=0, le=1000)] = 0,
+    offset: Annotated[int, Query(ge=0, le=9_007_199_254_740_991)] = 0,
 ) -> ListingPage:
     if min_price is not None and max_price is not None and min_price > max_price:
         raise AppError(422, "INVALID_PRICE_RANGE", "Minimum price exceeds maximum price")
     try:
-        raw, limited = store.scan_listings()
-        listings = [
-            listing
-            for listing in raw
-            if matches(
-                listing,
-                q=q.strip().casefold(),
-                category=category.strip().casefold(),
-                subcategory=subcategory.strip().casefold(),
-                city=city.strip().casefold(),
-                source=source,
-                min_price=min_price,
-                max_price=max_price,
-            )
-        ]
+        scanned_count = 0
+        listings = []
+        counts: dict[str, int] = {}
+        selected_subcategory = subcategory.strip().casefold()
+        filters = dict(
+            q=q.strip().casefold(),
+            category=category.strip().casefold(),
+            city=city.strip().casefold(),
+            source=source,
+            min_price=min_price,
+            max_price=max_price,
+        )
+        for listing in store.iter_listings():
+            scanned_count += 1
+            if not matches(listing, **filters):
+                continue
+            category_key = (listing.subcategory or "").casefold()
+            if category_key:
+                counts[category_key] = counts.get(category_key, 0) + 1
+            if not selected_subcategory or category_key == selected_subcategory:
+                listings.append(listing)
         if sort == "newest":
             listings.sort(key=lambda listing: listing.scraped_at, reverse=True)
         elif sort in {"price_asc", "price_desc"}:
@@ -126,8 +130,10 @@ def catalog(
     return ListingPage(
         items=items,
         next_offset=offset + limit if offset + limit < total else None,
-        scanned_count=len(raw),
-        scan_limited=limited,
+        scanned_count=scanned_count,
+        scan_limited=False,
+        total=total,
+        subcategory_counts=counts,
     )
 
 

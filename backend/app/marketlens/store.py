@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from hashlib import sha256
 
@@ -13,7 +14,7 @@ from app.marketlens.contracts import (
     PriceObservation,
 )
 
-SCAN_LIMIT = 1000
+READ_BATCH = 250
 STATS_LIMIT = 100
 
 
@@ -127,23 +128,34 @@ class MarketStore:
             truncated=len(records) > limit,
         )
 
-    def scan_listings(self) -> tuple[list[Listing], bool]:
-        records = list(
+    def iter_listings(self) -> Iterator[Listing]:
+        ordered = (
             self.db.collection("listings")
             .where(filter=firestore.FieldFilter("dataset", "==", "real"))
             .order_by("__name__")
-            .limit(SCAN_LIMIT + 1)
-            .stream()
         )
-        return [Listing.model_validate(record.to_dict()) for record in records[:SCAN_LIMIT]], len(
-            records
-        ) > SCAN_LIMIT
+        page = ordered.limit(READ_BATCH)
+        while True:
+            records = list(page.stream())
+            for record in records:
+                yield Listing.model_validate(record.to_dict())
+            if len(records) < READ_BATCH:
+                return
+            page = ordered.start_after(records[-1]).limit(READ_BATCH)
+
+    def scan_listings(self) -> tuple[list[Listing], bool]:
+        return list(self.iter_listings()), False
 
     def with_analysis(self, listings: list[Listing]) -> list[ListingItem]:
         if not listings:
             return []
         collection = self.db.collection("analysisResults")
-        records = self.db.get_all([collection.document(listing.id) for listing in listings])
+        refs = [collection.document(listing.id) for listing in listings]
+        records = (
+            record
+            for start in range(0, len(refs), READ_BATCH)
+            for record in self.db.get_all(refs[start : start + READ_BATCH])
+        )
         results = {
             record.id: AnalysisResult.model_validate(record.to_dict())
             for record in records

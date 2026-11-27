@@ -82,12 +82,14 @@ sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 city, minPrice, maxPrice, source, view=all|deals|risk, sort=default|newest|price_asc|price_desc, limit, offset.
 Для сортировки по цене сначала идут объявления с известной ценой в KZT, затем остальные.
 По умолчанию deals упорядочен по убыванию dealScore, risk — по убыванию riskScore. Возвращает
-{items, nextOffset, scannedCount, scanLimited}; каждый item — {listing, analysis}.
+{items, nextOffset, scannedCount, scanLimited, total, subcategoryCounts}; каждый item — {listing, analysis}.
 GET /listings/{id} возвращает такой же item.
 GET /listings/{id}/history отдаёт {items, truncated}, каждый снимок содержит
 scrapedAt, price и currency. По умолчанию 20 последних снимков, от новых к старым.
 Параметр limit принимает значения от 1 до 100. GET /stats возвращает
 {items, truncated}. POST /listings/{id}/explanation возвращает
 {provider, summary, insights, recommendations, limitations}. provider —
-local, gemini или openai. В MVP поиск/фильтры работают по первым 1000 реальных записям
-в порядке document ID. При превышении лимита интерфейс сообщает об ограничении.
+local, gemini или openai. Каталог читает все реальные записи пакетами Firestore в порядке document ID.
+`offset` применяется после фильтрации и сортировки. subcategoryCounts содержит
+размеры подкатегорий для заданных фильтров, кроме самой подкатегории и подборки.
+Радар использует медиану и гистограмму группы модели из GET /stats.
