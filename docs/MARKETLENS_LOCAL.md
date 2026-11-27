@@ -65,6 +65,7 @@ npm run dev -- --mode marketlens --host 127.0.0.1 --port 5174
 
 ```bash
 uv run --frozen python -m app.marketlens.import_listings /path/to/listings.json
+uv run --frozen python -m app.marketlens.refresh_analytics
 ```
 
 Сверьте количество карточек, цены, город и ссылки с оригиналами. При отсутствии

@@ -10,7 +10,7 @@ from app.marketlens.analytics import ALGORITHM_VERSION, analyze
 
 analysis = analyze(listings, computed_at=datetime.now(UTC))
 analysis.results  # list[AnalysisResult] — по одному на каждый уникальный listing.id
-analysis.stats    # list[MarketStats] — группы, использованные в оценке, и обзор категории
+analysis.stats  # list[MarketStats] — группы, использованные в оценке, и обзор категории
 ```
 
 - Вход: любые `Listing` по контракту v1. Повторы одного ID сворачиваются
