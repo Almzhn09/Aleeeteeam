@@ -447,3 +447,49 @@ def test_models_needing_samples_lists_thin_real_models():
 )
 def test_negated_phrases_do_not_raise_signals(title, codes):
     assert [signal.code for signal in risk.text_signals(phone("x", title, 300000))] == codes
+
+
+@pytest.mark.parametrize(
+    ("subcategory", "title", "model", "variant"),
+    [
+        ("tablets", "Apple iPad Air 4 64GB серый", "apple-ipad-air-4", "64gb"),
+        ("tablets", "Айпад 9 поколения 256 гб", "apple-ipad-9", "256gb"),
+        ("tablets", "Самсунг Галакси Таб S7 FE", "samsung-galaxy-tab-s7-fe", None),
+        ("tablets", "Xiaomi Redmi Pad SE 128GB", "xiaomi-pad-se", "128gb"),
+        ("tablets", "Планшет детский", None, None),
+        ("game-consoles", "Sony PlayStation 5 с дисководом", "sony-playstation-5", None),
+        ("game-consoles", "ПС5 slim digital", "sony-playstation-5", "slim"),
+        ("game-consoles", "Плейстейшн 4 Pro 1tb", "sony-playstation-4-pro", None),
+        ("game-consoles", "Xbox Series S 512", "microsoft-xbox-series-s", None),
+        ("game-consoles", "Nintendo Switch OLED", "nintendo-switch-oled", None),
+        ("headphones", "Наушники AirPods Pro 2 оригинал", "apple-airpods-pro-2", None),
+        ("headphones", "Sony WH-1000XM4", "sony-wh-1000xm4", None),
+        ("headphones", "Samsung Galaxy Buds 2 Pro", "samsung-galaxy-buds-2-pro", None),
+        ("audio", "Колонка JBL Charge 5", "jbl-charge-5", None),
+        ("audio", "Яндекс станция мини", "yandex-station-mini", None),
+        ("televisions", 'Телевизор Samsung 55" 4K', "55in", "samsung"),
+        ("televisions", "LG 43UQ75006LF Smart TV", "43in", "lg"),
+        ("televisions", "Телевизор диагональ 109 см", "43in", None),
+        ("televisions", "Телевизор б/у", None, None),
+        ("monitors", 'Монитор AOC 23.8" 165 Гц', "24in", "165hz"),
+        ("monitors", "Монитор Samsung 27 дюймов", "27in", None),
+    ],
+)
+def test_city_categories_get_model_keys(subcategory, title, model, variant):
+    keys = group_keys(phone("d", title, 100000, subcategory=subcategory))
+    assert keys["category"] == f"electronics/{subcategory}:all:any:KZT"
+    assert keys.get("model") == (f"electronics/{subcategory}:{model}:any:KZT" if model else None)
+    found = keys["variant"].split(":")[2] if "variant" in keys else None
+    assert found == variant
+
+
+def test_headphones_are_devices_but_games_are_not_consoles():
+    assert not risk.is_accessory(
+        phone("h", "Наушники AirPods Pro 2", 90000, subcategory="headphones")
+    )
+    assert risk.is_accessory(phone("p", "Наушники для iPhone", 5000))
+    assert risk.is_accessory(phone("g", "Игры на PS5 FIFA 24", 15000, subcategory="game-consoles"))
+    assert risk.is_accessory(phone("j", "Геймпад DualSense", 25000, subcategory="game-consoles"))
+    assert not risk.is_accessory(
+        phone("c", "Игровая приставка PS5", 250000, subcategory="game-consoles")
+    )

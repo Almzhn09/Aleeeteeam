@@ -11,7 +11,7 @@ from app.marketlens.analytics import risk
 from app.marketlens.analytics.grouping import LEVEL_WEIGHT, LEVELS, OVERVIEW_LEVELS, group_keys
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats, PriceBin
 
-ALGORITHM_VERSION = "v3"
+ALGORITHM_VERSION = "v4"
 MIN_PEERS = 4
 FULL_CONFIDENCE_PEERS = 10
 DEAL_FROM = -10.0
