@@ -12,3 +12,4 @@
 !backend/app/cli/ai_cases.json
 !deploy/
 !deploy/cloudbuild.yaml
+!deploy/marketlens-cloudbuild.yaml

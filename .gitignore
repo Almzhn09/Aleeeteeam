@@ -233,3 +233,5 @@ deploy/cloud-run.env.yaml
 deploy/monitor-job.env.yaml
 .local-demo-data/
 dist-demo/
+dist-marketlens/
+deploy/marketlens-cloud-run.env.yaml

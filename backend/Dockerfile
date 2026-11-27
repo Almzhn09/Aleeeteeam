@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS runtime
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,4 +15,8 @@ COPY app ./app
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8000
+FROM runtime AS marketlens
+CMD [".venv/bin/uvicorn", "app.marketlens.main:create_marketlens_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+
+FROM runtime AS saq
 CMD [".venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

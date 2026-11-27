@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
     }],
     envPrefix: marketLens ? 'VITE_MARKETLENS_' : 'VITE_',
     envDir: '..',
+    build: { outDir: marketLens ? 'dist-marketlens' : 'dist' },
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
       port: 5173,

@@ -13,7 +13,7 @@ Firebase-проект MarketLens, выставьте `MARKETLENS_FIREBASE_ENABLE
 для этого проекта. Для установки роли из `backend/` выполните
 `uv run --frozen python -m app.cli.role UID analyst --marketlens --project-confirm PROJECT_ID`.
 Укажите ID выделенного проекта. Примените правила и индекс истории к выделенному проекту:
-`firebase deploy --only firestore --config firebase.marketlens.local.json --project PROJECT_ID`. Сервер доверяет Firebase ID-токенам
+`firebase deploy --only firestore --config firebase.marketlens.json --project PROJECT_ID`. Сервер доверяет Firebase ID-токенам
 этого проекта и пишет в него через Admin SDK.
 
 В терминале из корня запустите backend:
@@ -33,7 +33,8 @@ npm run dev -- --mode marketlens --host 127.0.0.1 --port 5174
 ```
 
 Для production-сборки веб-клиента из `frontend/` используйте
-`npm run typecheck && npm exec -- vite build --mode marketlens`.
+`npm run build:marketlens`. Для облачной публикации используйте
+[инструкцию релиза MarketLens](docs/MARKETLENS_RELEASE.md).
 
 Доверенный серверный импорт принимает массив из 1–1000 нормализованных
 реальных записей по контракту. Из `backend/` выполните
