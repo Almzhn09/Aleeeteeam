@@ -76,7 +76,7 @@ sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 
 ## HTTP
 
-Префикс /api/v1/market; Firebase Bearer. GET /listings принимает q, category,
+Префикс /api/v1/market; Firebase Bearer. GET /listings принимает q, category, subcategory,
 city, minPrice, maxPrice, source, view=all|deals|risk, sort=default|newest|price_asc|price_desc, limit, offset.
 Для сортировки по цене сначала идут объявления с известной ценой в KZT, затем остальные. Возвращает
 {items, nextOffset, scannedCount, scanLimited}; каждый item — {listing, analysis}.

@@ -34,6 +34,7 @@ def matches(
     *,
     q: str,
     category: str,
+    subcategory: str,
     city: str,
     source: Source | None,
     min_price: float | None,
@@ -41,6 +42,7 @@ def matches(
 ) -> bool:
     return (
         (not category or category == listing.category.casefold())
+        and (not subcategory or subcategory == (listing.subcategory or "").casefold())
         and (not city or city == (listing.city or "").casefold())
         and (source is None or source == listing.source)
         and (not q or q in f"{listing.title} {listing.description or ''}".casefold())
@@ -62,6 +64,7 @@ def catalog(
     store: Store,
     q: Annotated[str, Query(max_length=120)] = "",
     category: Annotated[str, Query(max_length=120)] = "",
+    subcategory: Annotated[str, Query(max_length=120)] = "",
     city: Annotated[str, Query(max_length=120)] = "",
     source: Source | None = None,
     min_price: Annotated[float | None, Query(alias="minPrice", ge=0, allow_inf_nan=False)] = None,
@@ -82,6 +85,7 @@ def catalog(
                 listing,
                 q=q.strip().casefold(),
                 category=category.strip().casefold(),
+                subcategory=subcategory.strip().casefold(),
                 city=city.strip().casefold(),
                 source=source,
                 min_price=min_price,

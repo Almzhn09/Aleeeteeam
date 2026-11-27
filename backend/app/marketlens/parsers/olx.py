@@ -14,6 +14,11 @@ from app.marketlens.contracts import CollectionRequest, Listing, Source
 
 CATEGORY = "electronics"
 CATEGORY_URL = "https://www.olx.kz/elektronika/telefony-i-aksesuary/mobilnye-telefony-smartfony/"
+OLX_SECTIONS = {
+    "phones": CATEGORY_URL,
+    "laptops": "https://www.olx.kz/elektronika/noutbuki-i-aksesuary/noutbuki/",
+}
+
 USER_AGENT = "MarketLens/1.0"
 DETAIL_PATH = re.compile(r"/d/(?:obyavlenie|ogoloshennya)/[^/]+-ID([A-Za-z0-9]+)\.html")
 PRICE = re.compile(
@@ -166,7 +171,9 @@ def _city(location: list[str]) -> str | None:
     return value if separator and 1 <= len(value) <= 120 else None
 
 
-def _normalize(card: _Card, scraped_at: datetime, images: dict[str, list[str]]) -> Listing | None:
+def _normalize(
+    card: _Card, scraped_at: datetime, images: dict[str, list[str]], subcategory: str
+) -> Listing | None:
     title = " ".join("".join(card.title).split())
     if not 1 <= len(title) <= 500:
         return None
@@ -195,7 +202,7 @@ def _normalize(card: _Card, scraped_at: datetime, images: dict[str, list[str]]) 
             url=url,
             title=title,
             category=CATEGORY,
-            subcategory="phones",
+            subcategory=subcategory,
             price=price,
             currency="KZT" if price is not None else None,
             city=_city(card.location),
@@ -216,13 +223,14 @@ class OLXParser:
         self._authorized = authorized
 
     def collect(self, request: CollectionRequest) -> list[Listing]:
-        if request.category != CATEGORY:
-            raise ValueError("OLX: поддерживается только electronics (мобильные телефоны)")
+        section = "phones" if request.category == CATEGORY else request.category
+        if section not in OLX_SECTIONS:
+            raise ValueError("OLX: поддерживаются electronics/phones и electronics/laptops")
         if not self._authorized:
             raise OLXSourceError("OLX: требуется подтверждённое разрешение на сбор категории")
         try:
             response = self._client.get(
-                CATEGORY_URL,
+                OLX_SECTIONS[section],
                 headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
                 follow_redirects=False,
                 timeout=15,
@@ -243,7 +251,7 @@ class OLXParser:
         scraped_at = datetime.now(UTC)
         unique: dict[str, Listing] = {}
         for card in cards.cards:
-            listing = _normalize(card, scraped_at, images)
+            listing = _normalize(card, scraped_at, images, section)
             if listing is not None:
                 unique.setdefault(listing.id, listing)
                 if len(unique) == request.limit:

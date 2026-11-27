@@ -10,7 +10,7 @@ import { errorMessage } from '@/lib/labels'
 import { ListingHistory } from './dashboard/ListingHistory'
 import { MarketDistribution } from './dashboard/MarketDistribution'
 import { PriceComparison } from './dashboard/PriceComparison'
-import { formatPrice, marketNumber } from './dashboard/format'
+import { formatPrice, marketCategories, marketNumber } from './dashboard/format'
 import type {
   CatalogView, Explanation, ListingItem, ListingPage, RiskLevel, StatsPage,
 } from '@/lib/marketlens'
@@ -20,7 +20,7 @@ const viewLabels = { all: 'Каталог', deals: 'Выгодные предл�
 const riskLabels: Record<RiskLevel, string> = {
   unknown: 'Не оценён', low: 'Низкий', medium: 'Средний', high: 'Высокий',
 }
-const filterNames = ['q', 'category', 'city', 'source', 'minPrice', 'maxPrice', 'sort'] as const
+const filterNames = ['q', 'category', 'subcategory', 'city', 'source', 'minPrice', 'maxPrice', 'sort'] as const
 const pageSize = 24
 
 function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string }) {
@@ -31,7 +31,7 @@ function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string })
     {image && <img src={image} alt="" className="aspect-video w-full bg-muted object-contain"
       loading="lazy" referrerPolicy="no-referrer" />}
     <div className="content-pad space-y-3">
-      <p className="text-sm text-muted-foreground">{[listing.source.toUpperCase(), listing.city, listing.category].filter(Boolean).join(' · ')}</p>
+      <p className="text-sm text-muted-foreground">{[listing.source.toUpperCase(), listing.city, marketCategories[listing.subcategory ?? ''] ?? listing.category].filter(Boolean).join(' · ')}</p>
       <h2 className="text-lg font-semibold break-words">{listing.title}</h2>
       <p className="text-2xl font-semibold">{formatPrice(listing.price, listing.currency)}</p>
       {listing.description && <p className={detailed ? 'whitespace-pre-wrap break-words' : 'line-clamp-2 break-words'}>{listing.description}</p>}
@@ -110,7 +110,11 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
       description={view === 'risk' ? 'Признаки риска помогают выбрать, что проверить у продавца.' : 'Запрашиваемые цены и результаты сравнения предложений.'} />
     <form ref={form} onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <FormField label="Поиск"><input name="q" defaultValue={filters.get('q') ?? ''} maxLength={120} type="search" /></FormField>
-      <FormField label="Категория"><input name="category" defaultValue={filters.get('category') ?? ''} maxLength={120} /></FormField>
+      {filters.has('category') && <input type="hidden" name="category" defaultValue={filters.get('category') ?? ''} />}
+      <FormField label="Категория"><select name="subcategory" defaultValue={filters.get('subcategory') ?? ''}>
+        <option value="">Все категории</option>
+        {Object.entries(marketCategories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+      </select></FormField>
       <FormField label="Город"><input name="city" defaultValue={filters.get('city') ?? ''} maxLength={120} /></FormField>
       <FormField label="Источник"><select name="source" defaultValue={filters.get('source') ?? ''}>
         <option value="">Все источники</option><option value="olx">OLX</option>

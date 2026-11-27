@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { EmptyState, FormField } from '@/components/WorkspaceUI'
 import type { MarketStats } from '@/lib/marketlens'
-import { formatPrice, marketNumber, marketTime } from './format'
+import { formatPrice, marketCategories, marketNumber, marketTime } from './format'
 
-const categories: Record<string, string> = { electronics: 'Электроника' }
+function groupLabel(group: MarketStats) {
+  const [scope, product] = group.comparableGroup.split(':')
+  const subcategory = scope.split('/')[1]
+  const category = marketCategories[subcategory] ?? group.category
+  return product === 'all' ? `${category} · Общий обзор` : `${category} · ${group.comparableGroup}`
+}
 
 export function MarketDistribution({ groups }: { groups: MarketStats[] }) {
   const [selected, setSelected] = useState('')
@@ -33,7 +38,7 @@ export function MarketDistribution({ groups }: { groups: MarketStats[] }) {
       <FormField label="Сопоставимая группа">
         <select value={groupKey(group)} onChange={event => setSelected(event.target.value)}>
           {groups.map(item => <option value={groupKey(item)} key={groupKey(item)}>
-            {categories[item.category] ?? item.category} · {item.comparableGroup} · {item.currency}
+            {groupLabel(item)} · {item.currency}
           </option>)}
         </select>
       </FormField>

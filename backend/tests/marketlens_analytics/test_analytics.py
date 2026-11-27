@@ -328,3 +328,18 @@ def test_analyze_store_saves_results_and_stats_through_public_methods():
     assert summary == {"listings": 6, "scanLimited": False, "savedResults": 6, "savedStats": 3}
     assert all(item.dataset == "real" for item in store.stats)
     assert store.results[0].market_price == 330000
+
+
+def test_laptop_aggregates_remain_separate_from_phone_valuations():
+    laptops = [
+        phone(f"laptop{index}", "Ноутбук, обмен на iPhone 13", 100000, subcategory="laptops")
+        for index in range(6)
+    ]
+    output = analyze(iphone_market() + laptops, computed_at=COMPUTED)
+    assert all(by_id(output)[row.id].market_price is None for row in laptops)
+    group = next(
+        stats for stats in output.stats if stats.comparable_group.startswith("electronics/laptops:")
+    )
+    assert group.sample_size == 6
+    assert group.median_price == 100000
+    assert by_id(output)[iphone_market()[0].id].market_price == 330000

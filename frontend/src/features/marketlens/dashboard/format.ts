@@ -6,3 +6,8 @@ export const marketTime = new Intl.DateTimeFormat('ru-KZ', {
 export function formatPrice(value: number | null, currency: string | null) {
   return value === null ? 'Неизвестна' : [marketNumber.format(value), currency].filter(Boolean).join(' ')
 }
+
+export const marketCategories: Record<string, string> = {
+  phones: 'Мобильные телефоны',
+  laptops: 'Ноутбуки',
+}

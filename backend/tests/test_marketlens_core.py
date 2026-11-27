@@ -66,7 +66,10 @@ class Identity:
 
 class Store:
     def __init__(self):
-        self.rows = [listing(), listing("43", city="Астана", price=10000)]
+        self.rows = [
+            listing(subcategory="phones"),
+            listing("43", city="Астана", price=10000, subcategory="laptops"),
+        ]
 
     def scan_listings(self):
         return self.rows, False
@@ -106,6 +109,8 @@ def test_routes_authorize_filter_and_explain():
         ).json()
         assert page["nextOffset"] == 1
         assert page["items"][0]["listing"]["externalId"] == "42"
+        laptop_page = client.get("/api/v1/market/listings?subcategory=laptops", headers=HEADERS)
+        assert [item["listing"]["id"] for item in laptop_page.json()["items"]] == ["olx:43"]
         cheap = client.get("/api/v1/market/listings?sort=price_asc&limit=1", headers=HEADERS)
         assert cheap.json()["items"][0]["listing"]["externalId"] == "43"
         expensive = client.get("/api/v1/market/listings?sort=price_desc&limit=1", headers=HEADERS)

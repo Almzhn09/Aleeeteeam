@@ -241,3 +241,20 @@ def test_city_and_original_photos_are_joined_without_guessing():
     assert listing.city == "Астана"
     assert [str(image) for image in listing.images] == [valid.replace(":443", "")]
     assert listing.published_at is None
+
+
+def test_laptop_collection_uses_an_explicit_category_url():
+    category = synthetic_card("/d/obyavlenie/laptop-IDLaptop1.html", "Ноутбук", "120 000 тг.")
+
+    def respond(request):
+        assert str(request.url).endswith("/noutbuki-i-aksesuary/noutbuki/")
+        return html(category)
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        listing = OLXParser(client, authorized=True).collect(CollectionRequest(category="laptops"))[
+            0
+        ]
+
+    assert listing.category == "electronics"
+    assert listing.subcategory == "laptops"
+    assert listing.price == 120000

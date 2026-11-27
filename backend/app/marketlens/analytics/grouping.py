@@ -186,6 +186,10 @@ def group_keys(listing: Listing) -> dict[str, str]:
         else "any"
     )
     currency = listing.currency or "none"
+    category_key = f"{scope}:all:{condition}:{currency}"
+    if listing.subcategory not in {None, "phones"}:
+        return {"category": category_key}
+
     key = product_key(listing.title)
     keys: dict[str, str] = {}
     if key.model and key.storage:
@@ -194,5 +198,5 @@ def group_keys(listing: Listing) -> dict[str, str]:
         keys["model"] = f"{scope}:{key.model}:{condition}:{currency}"
     if key.brand:
         keys["brand"] = f"{scope}:{key.brand}:{condition}:{currency}"
-    keys["category"] = f"{scope}:all:{condition}:{currency}"
+    keys["category"] = category_key
     return keys
