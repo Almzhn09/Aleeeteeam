@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { LogOut, TrendingUp } from 'lucide-react'
+import { useComparison } from './MarketComparison'
 import './marketlens.css'
 
 const links = [
@@ -8,6 +9,7 @@ const links = [
   { to: '/listings', label: 'Каталог' },
   { to: '/deals', label: 'Выгодные' },
   { to: '/risk', label: 'Проверка' },
+  { to: '/compare', label: 'Сравнение' },
 ]
 
 export function MarketShell({ userName, onLogout, onSkip, children }: {
@@ -16,6 +18,7 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
   onSkip: () => void
   children: ReactNode
 }) {
+  const { ids } = useComparison()
   return <div className="ml-shell">
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); onSkip() }}>К содержимому</a>
     <header className="ml-header">
@@ -23,7 +26,7 @@ export function MarketShell({ userName, onLogout, onSkip, children }: {
         <MarketLogo />
         <nav aria-label="Основная навигация" className="ml-nav">
           {links.map(({ to, label }) => <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `ml-nav-link${isActive ? ' active' : ''}`}>{label}</NavLink>)}
+            className={({ isActive }) => `ml-nav-link${isActive ? ' active' : ''}`}>{label}{to === '/compare' && ids.length > 0 && ` (${ids.length})`}</NavLink>)}
         </nav>
         <div className="ml-user">
           <span className="ml-user-name">{userName}</span>

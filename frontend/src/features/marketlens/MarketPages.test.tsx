@@ -181,3 +181,32 @@ it('shows live counts, top deals and price distribution on the home page', async
     '/api/v1/market/listings?q=iphone+13&view=all&offset=0', expect.any(Object),
   ))
 })
+
+it('compares up to three listings, keeps selection across routes and allows removal', async () => {
+  const items = [1, 2, 3, 4].map(index => ({
+    ...row,
+    listing: { ...row.listing, id: `olx:test-${index}`, title: `Объявление ${index}` },
+  }))
+  const api = vi.fn().mockImplementation(async (path: string) => {
+    if (path.includes('/listings?')) return {
+      items, nextOffset: null, scanLimited: false, scannedCount: items.length,
+    }
+    const id = decodeURIComponent(path.split('/').at(-1) ?? '')
+    return items.find(item => item.listing.id === id)
+  })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(),
+    signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/listings']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+
+  const buttons = await screen.findAllByRole('button', { name: 'Сравнить' })
+  buttons.slice(0, 3).forEach(button => fireEvent.click(button))
+  expect(buttons[3]).toBeDisabled()
+  fireEvent.click(screen.getByRole('link', { name: 'Сравнение (3)' }))
+  expect(await screen.findByRole('link', { name: 'Объявление 1' })).toBeVisible()
+  expect(await screen.findByRole('link', { name: 'Объявление 3' })).toBeVisible()
+  expect(screen.queryByRole('link', { name: 'Объявление 4' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getAllByRole('button', { name: 'Убрать из сравнения' })[0])
+  expect(screen.queryByRole('link', { name: 'Объявление 1' })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Сравнение (2)' })).toBeVisible()
+})

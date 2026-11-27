@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useApiQuery } from '@/lib/useApiQuery'
 import { errorMessage } from '@/lib/labels'
+import { CompareButton } from './MarketComparison'
 import { ListingHistory } from './dashboard/ListingHistory'
 import { PriceComparison } from './dashboard/PriceComparison'
 import { formatPrice, marketCategories, marketNumber } from './dashboard/format'
@@ -84,6 +85,7 @@ function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string })
       </div>}
       <div className="flex flex-wrap gap-4">
         {!detailed && <DetailLink to={`/listings/${encodeURIComponent(listing.id)}`} state={{ catalog }}>Подробнее</DetailLink>}
+        <CompareButton id={listing.id} />
         <SourceLink url={listing.url} />
       </div>
       {detailed && listing.source === 'olx' && <details className="text-sm text-muted-foreground">

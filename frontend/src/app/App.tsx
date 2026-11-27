@@ -6,6 +6,7 @@ import { ConfigurationNotice, useAuth } from '@/features/auth/AuthProvider'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { EmptyState, LoadingState } from '@/components/WorkspaceUI'
 import { RouteBoundary } from './RouteBoundary'
+import { ComparisonProvider, MarketComparison } from '@/features/marketlens/MarketComparison'
 import { MarketLogo, MarketShell } from '@/features/marketlens/MarketShell'
 
 const MarketHome = lazy(() => import('@/features/marketlens/MarketHome').then(module => ({ default: module.MarketHome })))
@@ -69,7 +70,7 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
       </section> : <LoginPage marketLens={marketLens} />}
   </div>
   const logoutNow = () => { logout().catch(() => setLogoutError('Не удалось выйти. Повторите.')) }
-  if (marketLens) return <MarketShell userName={profile?.displayName || profile?.email || 'Аналитик'}
+  if (marketLens) return <ComparisonProvider><MarketShell userName={profile?.displayName || profile?.email || 'Аналитик'}
     onLogout={logoutNow} onSkip={focusMainContent}>
     {logoutError && <p role="alert" className="inline-notice">{logoutError}</p>}
     <RouteBoundary key={pathname}><Suspense fallback={<LoadingState />}><Routes>
@@ -78,9 +79,10 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
       <Route path="/deals" element={<MarketCatalog key="deals" view="deals" />} />
       <Route path="/risk" element={<MarketCatalog key="risk" view="risk" />} />
       <Route path="/listings/:id" element={<MarketListing key={pathname} />} />
+      <Route path="/compare" element={<MarketComparison />} />
       <Route path="*" element={<EmptyState title="Страница не найдена"><Link to="/">Вернуться на главную</Link></EmptyState>} />
     </Routes></Suspense></RouteBoundary>
-  </MarketShell>
+  </MarketShell></ComparisonProvider>
   return <div className="workspace-shell">
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); focusMainContent() }}>К содержимому</a>
     <aside className="sidebar">
