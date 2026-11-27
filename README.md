@@ -12,8 +12,8 @@ Firebase-проект MarketLens, выставьте `MARKETLENS_FIREBASE_ENABLE
 роль `analyst` или `admin` пользователю и выдайте серверу учётные данные
 для этого проекта. Для установки роли из `backend/` выполните
 `uv run --frozen python -m app.cli.role UID analyst --marketlens --project-confirm PROJECT_ID`.
-Укажите ID выделенного проекта. Развёртывайте Firestore rules
-с явным `--project` MarketLens. Сервер доверяет Firebase ID-токенам
+Укажите ID выделенного проекта. Примените правила и индекс истории к выделенному проекту:
+`firebase deploy --only firestore --config firebase.marketlens.local.json --project PROJECT_ID`. Сервер доверяет Firebase ID-токенам
 этого проекта и пишет в него через Admin SDK.
 
 В терминале из корня запустите backend:
@@ -38,11 +38,25 @@ npm run dev -- --mode marketlens --host 127.0.0.1 --port 5174
 Доверенный серверный импорт принимает массив из 1–1000 нормализованных
 реальных записей по контракту. Из `backend/` выполните
 `uv run --frozen python -m app.marketlens.import_listings listings.json`.
-Повтор того же снимка безопасен. Алгоритм аналитики публикует результаты
-через `MarketStore.save_analysis` и `MarketStore.save_stats`.
+Повтор того же снимка безопасен. После импорта из `backend/` выполните
+`uv run --frozen python -m app.marketlens.refresh_analytics`. Команда
+берёт актуальные реальные карточки в пределах лимита каталога, рассчитывает
+сравнения и публикует оценки и гистограммы без Gemini. Повторите расчёт
+после следующего импорта.
 Пока сборщик не загрузил реальные записи, каталог отображает пустое состояние.
 Gemini необязателен. Сборщик OLX и его параметры описаны в
 [инструкции по сбору](backend/app/marketlens/parsers/README.md).
+
+Для обновления каталога одной командой из `backend/` после подтверждения
+разрешения OLX:
+
+```bash
+uv run --frozen python -m app.marketlens.update_olx --authorized --limit 30
+```
+
+Команда выводит JSON с числом записей, новых снимков, оценок и групп. Если
+источник недоступен или пуст, импорт не запускается. При сбое только на этапе
+аналитики её можно повторить через `refresh_analytics` без нового сбора.
 
 Для проверки без облачных ключей используйте [локальное окружение MarketLens](docs/MARKETLENS_LOCAL.md).
 

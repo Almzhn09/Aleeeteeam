@@ -137,3 +137,14 @@ class ListingPage(MarketModel):
 class StatsPage(MarketModel):
     items: list[MarketStats]
     truncated: bool
+
+
+class PriceObservation(MarketModel):
+    scraped_at: AwareDatetime
+    price: float | None
+    currency: str | None
+
+
+class PriceHistory(MarketModel):
+    items: list[PriceObservation]
+    truncated: bool

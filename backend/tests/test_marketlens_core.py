@@ -8,7 +8,13 @@ from pydantic import ValidationError
 
 from app.api.dependencies import get_runtime
 from app.marketlens.api import market_store
-from app.marketlens.contracts import AnalysisResult, Listing, ListingItem
+from app.marketlens.contracts import (
+    AnalysisResult,
+    Listing,
+    ListingItem,
+    PriceHistory,
+    PriceObservation,
+)
 from app.marketlens.explanation import explain
 from app.marketlens.main import create_marketlens_app
 from app.marketlens.settings import MarketLensSettings
@@ -74,6 +80,13 @@ class Store:
             for row in rows
         ]
 
+    def price_history(self, listing_id, limit):
+        assert listing_id == "olx:42" and limit == 1
+        return PriceHistory(
+            items=[PriceObservation(scraped_at=WHEN, price=85000, currency="KZT")],
+            truncated=True,
+        )
+
     def get_stats(self):
         return [], False
 
@@ -93,6 +106,20 @@ def test_routes_authorize_filter_and_explain():
         ).json()
         assert page["nextOffset"] == 1
         assert page["items"][0]["listing"]["externalId"] == "42"
+        cheap = client.get("/api/v1/market/listings?sort=price_asc&limit=1", headers=HEADERS)
+        assert cheap.json()["items"][0]["listing"]["externalId"] == "43"
+        expensive = client.get("/api/v1/market/listings?sort=price_desc&limit=1", headers=HEADERS)
+        assert expensive.json()["items"][0]["listing"]["externalId"] == "42"
+        history = client.get("/api/v1/market/listings/olx:42/history?limit=1", headers=HEADERS)
+        assert history.json() == {
+            "items": [{"scrapedAt": "2026-11-27T00:00:00Z", "price": 85000, "currency": "KZT"}],
+            "truncated": True,
+        }
+        assert client.get("/api/v1/market/listings/olx:42/history?limit=1").status_code == 401
+        assert (
+            client.get("/api/v1/market/listings/olx:missing/history", headers=HEADERS).status_code
+            == 404
+        )
         for view in ("deals", "risk"):
             response = client.get(
                 "/api/v1/market/listings",
@@ -213,3 +240,36 @@ def test_emulator_requires_both_loopback_services_and_demo_project(monkeypatch):
     with pytest.raises(ValueError, match="service account"):
         create_marketlens_app(demo.model_copy(update={"firebase_credentials_path": "key.json"}))
     assert create_marketlens_app(demo).state.firebase.settings is demo
+
+
+@pytest.mark.parametrize("source_failure", ["unavailable", "empty"])
+def test_olx_update_does_not_open_firestore_on_collection_failure(
+    monkeypatch, capsys, source_failure
+):
+    from app.marketlens import update_olx
+
+    monkeypatch.setattr("sys.argv", ["update_olx", "--authorized"])
+    monkeypatch.setenv("MARKETLENS_FIREBASE_ENABLED", "true")
+
+    class Runtime:
+        def db(self):
+            pytest.fail("Firestore must remain unopened when collection failed")
+
+    def collect(self, request):
+        if source_failure == "unavailable":
+            raise update_olx.OLXSourceError("HTTP 403")
+        return []
+
+    monkeypatch.setattr(update_olx, "marketlens_runtime", lambda settings: Runtime())
+    monkeypatch.setattr(update_olx.OLXParser, "collect", collect)
+
+    with pytest.raises(SystemExit) as failure:
+        update_olx.main()
+    assert failure.value.code == 1
+    out = capsys.readouterr()
+    assert not out.out
+    assert (
+        "403" in out.err
+        if source_failure == "unavailable"
+        else "catalog was left unchanged" in out.err
+    )

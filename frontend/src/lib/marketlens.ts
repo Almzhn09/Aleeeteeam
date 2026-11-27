@@ -80,3 +80,8 @@ export interface Explanation {
   recommendations: string[]
   limitations: string[]
 }
+
+export interface PriceHistory {
+  items: { scrapedAt: string; price: number | null; currency: string | null }[]
+  truncated: boolean
+}

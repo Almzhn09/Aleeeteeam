@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '@/app/App'
@@ -19,6 +19,13 @@ const row: ListingItem = {
 describe('MarketLens workspace', () => {
   it('opens a filtered catalog, follows an item and requests its local explanation', async () => {
     const api = vi.fn().mockImplementation(async (path: string) => {
+      if (path.endsWith('/history')) return {
+        items: [
+          { scrapedAt: '2026-11-27T09:00:00Z', price: 85000, currency: 'KZT' },
+          { scrapedAt: '2026-11-26T09:00:00Z', price: null, currency: null },
+        ],
+        truncated: true,
+      }
       if (path.endsWith('/explanation')) return {
         provider: 'local', summary: 'Оценка пока недоступна.',
         insights: [], recommendations: [], limitations: ['Цены объявлений'],
@@ -44,8 +51,42 @@ describe('MarketLens workspace', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Подробнее' }))
     expect(await screen.findByRole('link', { name: 'Открыть источник ↗' }))
       .toHaveAttribute('href', row.listing.url)
+    const history = await screen.findByRole('region', { name: 'История цен' })
+    expect(await within(history).findByText(/85\s000 KZT/)).toBeVisible()
+    expect(within(history).getByText('Неизвестна')).toBeVisible()
+    expect(within(history).getByText('Показаны последние 2 снимков.')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Получить пояснение' }))
     expect(await screen.findByText('Локальное пояснение')).toBeInTheDocument()
     expect(api).toHaveBeenCalledWith('/api/v1/market/listings/olx%3Atest/explanation', { method: 'POST' })
   })
+})
+
+it('shows the server comparison and reasons on a deal without asking Gemini', async () => {
+  const analyzed: ListingItem = {
+    ...row,
+    analysis: {
+      listingId: row.listing.id, listingScrapedAt: row.listing.scrapedAt,
+      computedAt: '2026-11-27T10:00:00Z', algorithmVersion: 'test',
+      comparableGroup: 'phones', marketPrice: 100000, priceDeviationPercent: -15,
+      savingsAmount: 15000, dealScore: 70, riskScore: 50, riskLevel: 'medium',
+      riskReasons: [{ code: 'gap', description: 'Цена заметно ниже медианы.' }],
+      confidence: 0.7, sampleSize: 12, isDeal: true,
+    },
+  }
+  const api = vi.fn().mockImplementation(async (path: string) => {
+    if (path.endsWith('/history')) return { items: [], truncated: false }
+    if (path.includes('/listings?')) return { items: [analyzed], nextOffset: null, scanLimited: false, scannedCount: 1 }
+    return analyzed
+  })
+  render(<AuthContext.Provider value={{
+    status: 'authenticated', profile: null, error: null, logout: vi.fn(),
+    signIn: vi.fn(), api,
+  }}><MemoryRouter initialEntries={['/deals']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
+
+  expect(await screen.findByText(/Выгода по оценке/)).toBeVisible()
+  expect(api).toHaveBeenCalledWith(expect.stringContaining('view=deals'), expect.any(Object))
+  fireEvent.click(screen.getByRole('link', { name: 'Подробнее' }))
+  expect(await screen.findByRole('region', { name: 'Сравнение цены' })).toHaveTextContent('-15%')
+  expect(screen.getByText('Цена заметно ниже медианы.')).toBeVisible()
+  expect(api.mock.calls.every(([path]) => !String(path).endsWith('/explanation'))).toBe(true)
 })

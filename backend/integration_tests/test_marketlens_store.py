@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats
+from app.marketlens.refresh_analytics import refresh_analytics
 from app.marketlens.store import MarketStore
 
 
@@ -35,6 +36,13 @@ def test_market_store_keeps_snapshots_and_matches_current_analysis(db):
     assert len(list(db.collection("listingSnapshots").stream())) == 3
     assert store.scan_listings() == ([latest], False)
     assert store.get_listing(fixture.id) is None
+    history = store.price_history(row.id, 2)
+    assert not history.truncated
+    assert [(item.scraped_at, item.price) for item in history.items] == [
+        (latest.scraped_at, 80000),
+        (row.scraped_at, 85000),
+    ]
+    assert store.price_history(row.id, 1).truncated
 
     result = AnalysisResult(
         listing_id=latest.id,
@@ -63,3 +71,38 @@ def test_market_store_keeps_snapshots_and_matches_current_analysis(db):
     assert not store.save_stats(stats)
     assert store.save_stats(stats.model_copy(update={"dataset": "fixture"}))
     assert store.get_stats() == ([stats], False)
+
+
+def test_refresh_publishes_comparison_and_histogram_for_real_catalog(db):
+    store = MarketStore(db)
+    scraped_at = datetime(2026, 11, 27, tzinfo=UTC)
+    rows = [
+        Listing(
+            id=f"olx:{index}",
+            external_id=str(index),
+            source="olx",
+            dataset="real",
+            url=f"https://www.olx.kz/example/{index}",
+            title="iPhone 13 128 GB",
+            category="electronics",
+            subcategory="phones",
+            price=price,
+            currency="KZT",
+            scraped_at=scraped_at,
+        )
+        for index, price in enumerate([50000, 100000, 100000, 100000, 100000, 100000])
+    ]
+    for row in rows:
+        assert store.save_listing(row)
+
+    counts = refresh_analytics(store)
+
+    assert counts["scannedCount"] == counts["savedResults"] == 6
+    assert counts["savedGroups"] > 0
+    result = store.with_analysis(rows[:1])[0].analysis
+    assert result is not None
+    assert result.market_price == 100000
+    assert "price_far_below_market" in {reason.code for reason in result.risk_reasons}
+    groups, truncated = store.get_stats()
+    assert not truncated
+    assert all(sum(bin.count for bin in group.histogram) == group.sample_size for group in groups)

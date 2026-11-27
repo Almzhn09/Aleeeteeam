@@ -3,7 +3,14 @@ from hashlib import sha256
 
 from firebase_admin import firestore
 
-from app.marketlens.contracts import AnalysisResult, Listing, ListingItem, MarketStats
+from app.marketlens.contracts import (
+    AnalysisResult,
+    Listing,
+    ListingItem,
+    MarketStats,
+    PriceHistory,
+    PriceObservation,
+)
 
 SCAN_LIMIT = 1000
 STATS_LIMIT = 100
@@ -86,6 +93,20 @@ class MarketStore:
         if record is None or record.get("dataset") != "real":
             return None
         return Listing.model_validate(record)
+
+    def price_history(self, listing_id: str, limit: int) -> PriceHistory:
+        records = list(
+            self.db.collection("listingSnapshots")
+            .where(filter=firestore.FieldFilter("listingId", "==", listing_id))
+            .order_by("scrapedAt", direction=firestore.Query.DESCENDING)
+            .select(["scrapedAt", "price", "currency"])
+            .limit(limit + 1)
+            .stream()
+        )
+        return PriceHistory(
+            items=[PriceObservation.model_validate(record.to_dict()) for record in records[:limit]],
+            truncated=len(records) > limit,
+        )
 
     def scan_listings(self) -> tuple[list[Listing], bool]:
         records = list(
