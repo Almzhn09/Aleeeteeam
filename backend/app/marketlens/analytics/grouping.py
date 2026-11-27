@@ -89,6 +89,9 @@ _BRANDS = (
 _STORAGE_TB = re.compile(r"\b([12])\s*tb\b")
 _STORAGE_GB = re.compile(r"\b(16|32|64|128|256|512)\s*gb\b")
 _STORAGE_PAIR = re.compile(r"\b\d{1,2}\s*/\s*(16|32|64|128|256|512|1024)\b")
+# A bare capacity right after the model ("Айфон 12 про макс 128"). 16 and 32 are
+# left out because they collide with model numbers.
+_STORAGE_BARE = re.compile(r"\s*(64|128|256|512)\b")
 
 
 def normalize_text(text: str) -> str:
@@ -115,7 +118,10 @@ def product_key(title: str) -> ProductKey:
         if match := pattern.search(text):
             prefix = {"apple": "iphone", "samsung": "galaxy", "google": "pixel"}.get(brand)
             name = _slug(prefix, match[1], match[2])
-            return ProductKey(brand, f"{brand}-{name}", _storage(text))
+            storage = _storage(text)
+            if storage is None and (bare := _STORAGE_BARE.match(text, match.end())):
+                storage = f"{bare[1]}gb"
+            return ProductKey(brand, f"{brand}-{name}", storage)
     brand = next((name for name, pattern in _BRANDS if pattern.search(text)), None)
     return ProductKey(brand, None, _storage(text))
 
