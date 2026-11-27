@@ -16,7 +16,7 @@ analysis.stats  # list[MarketStats] — группы оценки и обзор 
 - Вход: любые `Listing` по контракту v1. Повторы одного ID сворачиваются
   до последнего `scrapedAt`; `listingScrapedAt` в результате указывает именно его.
 - `computed_at` обязателен и должен содержать часовой пояс.
-- `algorithmVersion` = `ALGORITHM_VERSION` (`"v2"`). При смене формулы версия
+- `algorithmVersion` = `ALGORITHM_VERSION` (`"v3"`). При смене формулы версия
   поднимается — API может сравнить версию и вернуть `analysis=null`.
 - Сохранение: `MarketStore.save_analysis(result)` и `publish_stats(stats, computed_at)` из core
   уже принимают эти объекты без изменений контракта.
@@ -61,6 +61,14 @@ Huawei, Honor, Realme, OnePlus, Oppo, Vivo, Tecno, Infinix, Nokia и Motorola �
 на них много разных моделей, а сравнение iPhone 15 Pro с Redmi давало бы
 ложные выгоды и ложные признаки риска. Город в группу не входит. Без своей
 модели оценка не выставляется.
+
+### Ноутбуки (`subcategory = "laptops"`)
+
+Модель — бренд, серия и номер: `lenovo-ideapad-3`, `asus-tuf-f15`,
+`apple-macbook-air-m1`. Бренд определяется по серии (IdeaPad, VivoBook, Pavilion,
+Aspire, Inspiron, MateBook и др. — см. `laptops.py`). Вариант внутри модели —
+процессор (`i5`, `ryzen5`, `m3-pro`), а не память. Без серии в заголовке ноутбук
+попадает только в обзор категории. Другие подкатегории — только обзор.
 
 ## Формулы
 

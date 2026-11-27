@@ -9,6 +9,7 @@ level that still has enough priced peers.
 import re
 from dataclasses import dataclass
 
+from app.marketlens.analytics.laptops import laptop_key
 from app.marketlens.contracts import Listing
 
 # Prices are compared only inside one model; brand and category are overview stats.
@@ -29,6 +30,9 @@ _TRANSLITERATION = tuple(
         (r"хонор", "honor"),
         (r"реалми", "realme"),
         (r"пиксель", "pixel"),
+        (r"макбук", "macbook"),
+        (r"леново", "lenovo"),
+        (r"асус", "asus"),
         (r"\bпро\b", "pro"),
         (r"\bмакс\b", "max"),
         (r"\bплюс\b", "plus"),
@@ -187,16 +191,20 @@ def group_keys(listing: Listing) -> dict[str, str]:
     )
     currency = listing.currency or "none"
     category_key = f"{scope}:all:{condition}:{currency}"
-    if listing.subcategory not in {None, "phones"}:
+    if listing.subcategory == "laptops":
+        brand, model, variant = laptop_key(normalize_text(listing.title))
+    elif listing.subcategory in {None, "phones"}:
+        key = product_key(listing.title)
+        brand, model, variant = key.brand, key.model, key.storage
+    else:
         return {"category": category_key}
 
-    key = product_key(listing.title)
     keys: dict[str, str] = {}
-    if key.model and key.storage:
-        keys["variant"] = f"{scope}:{key.model}:{key.storage}:{condition}:{currency}"
-    if key.model:
-        keys["model"] = f"{scope}:{key.model}:{condition}:{currency}"
-    if key.brand:
-        keys["brand"] = f"{scope}:{key.brand}:{condition}:{currency}"
+    if model and variant:
+        keys["variant"] = f"{scope}:{model}:{variant}:{condition}:{currency}"
+    if model:
+        keys["model"] = f"{scope}:{model}:{condition}:{currency}"
+    if brand:
+        keys["brand"] = f"{scope}:{brand}:{condition}:{currency}"
     keys["category"] = category_key
     return keys

@@ -10,7 +10,8 @@ from pydantic import TypeAdapter
 
 from app.marketlens.analytics import ALGORITHM_VERSION, analyze, analyze_store, histogram
 from app.marketlens.analytics.__main__ import main as analyze_cli
-from app.marketlens.analytics.grouping import group_keys, product_key
+from app.marketlens.analytics.grouping import group_keys, normalize_text, product_key
+from app.marketlens.analytics.laptops import laptop_key
 from app.marketlens.contracts import AnalysisResult, Listing, MarketStats
 
 SCRAPED = datetime(2026, 11, 27, 9, tzinfo=UTC)
@@ -343,3 +344,37 @@ def test_laptop_aggregates_remain_separate_from_phone_valuations():
     assert group.sample_size == 6
     assert group.median_price == 100000
     assert by_id(output)[iphone_market()[0].id].market_price == 330000
+
+
+@pytest.mark.parametrize(
+    ("title", "brand", "model", "processor"),
+    [
+        ("Apple MacBook Air M1 13 256gb", "apple", "apple-macbook-air-m1", "m1"),
+        ("Макбук про 14 M3 Pro", "apple", "apple-macbook-pro-m3", "m3-pro"),
+        ("Леново ideapad 5", "lenovo", "lenovo-ideapad-5", None),
+        ("MacBook Pro 14 M3 Pro 18/512", "apple", "apple-macbook-pro-m3", "m3-pro"),
+        ("Lenovo IdeaPad 3 15IML05 Core i5", "lenovo", "lenovo-ideapad-3", "i5"),
+        ("Ноутбук ASUS TUF Gaming F15 i7 RTX 3050", "asus", "asus-tuf-f15", "i7"),
+        ("HP Pavilion 15 Ryzen 5", "hp", "hp-pavilion-15", "ryzen5"),
+        ("Acer Aspire 5", "acer", "acer-aspire-5", None),
+        ("Huawei MateBook D15", "huawei", "huawei-matebook-d15", None),
+        ("Ноутбук, обмен на iPhone 13", None, None, None),
+    ],
+)
+def test_laptop_key_reads_series_and_processor(title, brand, model, processor):
+    assert laptop_key(normalize_text(title)) == (brand, model, processor)
+
+
+def test_laptops_are_valued_within_their_own_model():
+    laptops = [
+        phone(f"ip{index}", "Lenovo IdeaPad 3 i5", price, subcategory="laptops")
+        for index, price in enumerate((200000, 210000, 220000, 230000, 240000))
+    ]
+    legion = phone("legion", "Lenovo Legion 5 i7", 150000, subcategory="laptops")
+    results = by_id(analyze([*laptops, legion, *iphone_market()], computed_at=COMPUTED))
+    result = results["olx:fixture-ip0"]
+    assert result.comparable_group == "electronics/laptops:lenovo-ideapad-3:i5:any:KZT"
+    assert result.market_price == 225000
+    assert result.is_deal
+    assert results["olx:fixture-legion"].market_price is None
+    assert results["olx:fixture-i0"].comparable_group == GROUP_13

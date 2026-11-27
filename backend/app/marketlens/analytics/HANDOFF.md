@@ -30,3 +30,13 @@
   В stderr будет сводка (`withMarketPrice`, `deals`, `riskMediumOrHigh`) — пришли её,
   по ней подстроим
   распознавание моделей.
+
+## Артуру · ноутбуки (v3)
+
+- Ноутбуки теперь оцениваются внутри своей модели, как телефоны:
+  `electronics/laptops:lenovo-ideapad-3:i5:any:KZT`. Твоё ограничение
+  «laptops → только категория» заменено распознаванием серии; твой тест
+  `test_laptop_aggregates_remain_separate_from_phone_valuations` проходит без изменений.
+- `ALGORITHM_VERSION` поднят до `"v3"`: до запуска `refresh_analytics` API будет
+  отдавать `analysis = null` для старых результатов v2. После обновления каталога
+  запусти refresh один раз.
