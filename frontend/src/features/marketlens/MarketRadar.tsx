@@ -24,9 +24,9 @@ function modelLabel(key: string) {
   const [scope, model, ...details] = key.split(':')
   const section = marketCategories[scope.split('/')[1]] ?? scope
   const variant = details.length === 3
-    ? details[0].replace(/(\d+)gb$/, '$1 ГБ').replace(/(\d+)tb$/, '$1 ТБ')
+    ? details[0].replace(/(\d+)gb$/, '$1 ГБ').replace(/(\d+)tb$/, '$1 ТБ').replace(/^(\d+)hz$/, '$1 Гц')
     : ''
-  const title = model.replace(/^apple-iphone-/, 'iPhone-').replace(/-/g, ' ')
+  const title = model.replace(/^(\d+)in$/, '$1″').replace(/^apple-iphone-/, 'iPhone-').replace(/-/g, ' ')
   return [title, variant, section].filter(Boolean).join(' · ')
 }
 

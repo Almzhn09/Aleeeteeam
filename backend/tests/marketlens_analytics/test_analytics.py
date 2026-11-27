@@ -454,6 +454,8 @@ def test_negated_phrases_do_not_raise_signals(title, codes):
     [
         ("tablets", "Apple iPad Air 4 64GB серый", "apple-ipad-air-4", "64gb"),
         ("tablets", "Айпад 9 поколения 256 гб", "apple-ipad-9", "256gb"),
+        ("tablets", "Apple iPad 11 Pro 256GB", None, None),
+        ("tablets", "Продам iPad Air 11", None, None),
         ("tablets", "Самсунг Галакси Таб S7 FE", "samsung-galaxy-tab-s7-fe", None),
         ("tablets", "Xiaomi Redmi Pad SE 128GB", "xiaomi-pad-se", "128gb"),
         ("tablets", "Планшет детский", None, None),
@@ -470,9 +472,12 @@ def test_negated_phrases_do_not_raise_signals(title, codes):
         ("televisions", 'Телевизор Samsung 55" 4K', "55in", "samsung"),
         ("televisions", "LG 43UQ75006LF Smart TV", "43in", "lg"),
         ("televisions", "Телевизор диагональ 109 см", "43in", None),
+        ("televisions", "Плазменный телевизор Samsung PS42B450B1W", "42in", "samsung"),
+        ("televisions", "Телевизор LG 42″ Full HD", "42in", "lg"),
         ("televisions", "Телевизор б/у", None, None),
         ("monitors", 'Монитор AOC 23.8" 165 Гц', "24in", "165hz"),
         ("monitors", "Монитор Samsung 27 дюймов", "27in", None),
+        ("monitors", "Монитор 27’’ 280Hz OLED", "27in", "280hz"),
     ],
 )
 def test_city_categories_get_model_keys(subcategory, title, model, variant):
@@ -493,3 +498,12 @@ def test_headphones_are_devices_but_games_are_not_consoles():
     assert not risk.is_accessory(
         phone("c", "Игровая приставка PS5", 250000, subcategory="game-consoles")
     )
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["Продажа игр на Playstation PS4", "Разблокировка и прошивка PS4", "Pro controller Switch"],
+)
+def test_console_services_and_accessories_do_not_count_as_consoles(title):
+    listing = phone("a", title, 5000, subcategory="game-consoles")
+    assert any(signal.excludes_from_market for signal in risk.text_signals(listing))

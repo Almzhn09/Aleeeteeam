@@ -12,6 +12,7 @@ _STORAGE = re.compile(r"\b(32|64|128|256|512)\s*gb\b|\b([12])\s*tb\b")
 
 # --- tablets -----------------------------------------------------------------
 _IPAD = re.compile(r"\bipad\s*(pro|air|mini)?\s*(\d{1,2})(?:\s*(?:gen|поколени\w*))?\b")
+_IPAD_SIZE = re.compile(r"\bipad\s*(?:(?:pro|air)\s*(?:10|11|12|13)\b|11\s*(?:pro|air)\b)")
 _GALAXY_TAB = re.compile(r"\btab\s*([sa]\d{1,2})(?:\s*(ultra|plus|\+|fe|lite))?(?!\w)")
 _XIAOMI_PAD = re.compile(r"\b(?:redmi|xiaomi|mi)\s*pad\s*(\d{1,2}|se)?(?:\s*(pro|se))?(?!\w)")
 
@@ -32,12 +33,12 @@ _YANDEX = re.compile(
 )
 
 # --- screens -----------------------------------------------------------------
-_INCHES = re.compile(r"(\d{2}(?:[.,]\d)?)\s*(?:\"|”|''|дюйм\w*|inch\w*|in\b)")
+_INCHES = re.compile(r"(\d{2}(?:[.,]\d)?)\s*(?:\"|”|″|''|’’|дюйм\w*|inch\w*|in\b)")
 _DIAGONAL = re.compile(r"диагонал\w*\s*(\d{2,3}(?:[.,]\d)?)\s*(см)?")
 _CM = re.compile(r"\b(\d{2,3})\s*см\b")
 # Manufacturer codes start with the diagonal: UE43AU7100, 55UQ75006LF, 43PUS7008.
-_TV_CODE = re.compile(r"\b(?:ue|qe|un|kd|xr)?(\d{2})[a-z]{2,4}\d{3,5}")
-_HERTZ = re.compile(r"\b(60|75|100|120|144|165|170|180|240)\s*(?:hz|гц)\b")
+_TV_CODE = re.compile(r"\b(?:ue|qe|un|kd|xr|ps)?(\d{2})[a-z]{1,4}\d{3,5}")
+_HERTZ = re.compile(r"\b([1-9]\d{1,2})\s*(?:hz|гц|герц\w*)\b")
 SCREEN_BRANDS = (
     "samsung",
     "lg",
@@ -78,6 +79,9 @@ def _storage(text: str) -> str | None:
 
 
 def tablet_key(text: str) -> tuple[str | None, str | None, str | None]:
+    if _IPAD_SIZE.search(text):
+        # A screen size alone does not identify the generation of an Air or Pro.
+        return "apple", None, None
     if match := _IPAD.search(text):
         return "apple", _slug("apple-ipad", match[1], match[2]), _storage(text)
     if match := _GALAXY_TAB.search(text):

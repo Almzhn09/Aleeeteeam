@@ -75,10 +75,14 @@ _ACCESSORY = re.compile(
     r"запчаст\w*|игр[аыу]|диск\w*|геймпад\w*|джойстик\w*)\s+(?:для|на|от|к|под|[a-z])"
     r"|\bмуляж\w*"
 )
+_CONSOLE_ACCESSORY_OR_SERVICE = re.compile(
+    r"^(?:(?:продам|продажа)\s+)?(?:игр[аыу]?|диск\w*|руль|(?:pro\s+)?controller)\b"
+    r"|^(?:разблокировк\w*|прошивка|ремонт)\b"
+)
 ACCESSORY = Signal(
     "accessory_not_device",
     0,
-    "Похоже на аксессуар, запчасть или муляж — не сравнивается с устройствами",
+    "Похоже на аксессуар, запчасть, муляж или услугу — не сравнивается с устройствами",
     excludes_from_market=True,
 )
 
@@ -88,6 +92,8 @@ def is_accessory(listing: Listing) -> bool:
     if listing.subcategory == "headphones":
         # "Наушники AirPods Pro 2" is the device itself in this category.
         text = re.sub(r"^наушник\w*\s+", "", text)
+    if listing.subcategory == "game-consoles" and _CONSOLE_ACCESSORY_OR_SERVICE.search(text):
+        return True
     return _ACCESSORY.search(text) is not None
 
 

@@ -226,7 +226,7 @@ it('compares up to three listings, keeps selection across routes and allows remo
 it('uses observed prices to update the radar budget and available offers', async () => {
   const key = 'electronics/phones:apple-iphone-13:128gb:any:KZT'
   const api = vi.fn().mockResolvedValue({
-    groups: [{ key, sampleSize: 2 }],
+    groups: [{ key, sampleSize: 2 }, { key: 'electronics/monitors:27in:280hz:any:KZT', sampleSize: 1 }],
     sample: {
       key, prices: [85000, 100000], medianPrice: null,
       histogram: [{ min: 85000, max: 100000, count: 2 }],
@@ -240,6 +240,7 @@ it('uses observed prices to update the radar budget and available offers', async
   }}><MemoryRouter initialEntries={['/radar']}><App marketLens /></MemoryRouter></AuthContext.Provider>)
 
   expect(await screen.findByText('В бюджете 1 из 2')).toBeVisible()
+  expect(screen.getByRole('option', { name: '27″ · 280 Гц · Мониторы (1)' })).toBeInTheDocument()
   expect(screen.getByText('Пока мало сопоставимых объявлений для рыночного ориентира.')).toBeVisible()
   expect(screen.getByRole('link', { name: row.listing.title })).toBeVisible()
   fireEvent.change(screen.getByLabelText('Бюджет, ₸'), { target: { value: '70000' } })
