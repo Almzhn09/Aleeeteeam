@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
     "build:marketlens": "npm run typecheck && vite build --mode marketlens",
-    "build:marketlens:hosting": "node scripts/check-marketlens-hosting-env.mjs && npm run build:marketlens",
+    "build:marketlens:hosting": "node scripts/check-marketlens-hosting-env.mjs && npm run build:marketlens && node scripts/write-marketlens-release.mjs",
     "build:hosting": "node scripts/check-hosting-env.mjs && npm run build",
     "test": "vitest run",
     "demo": "vite --config local-demo/vite.config.ts"

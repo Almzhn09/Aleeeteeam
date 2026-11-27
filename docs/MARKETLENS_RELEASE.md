@@ -75,7 +75,10 @@ firebase deploy --project "$PROJECT_ID" --config firebase.marketlens.json \
   --only firestore,hosting
 ```
 
-MarketLens публикуется из `frontend/dist-marketlens`. Конфигурация разворачивает
+MarketLens публикуется из `frontend/dist-marketlens`. Команда
+`build:marketlens:hosting` требует чистого рабочего дерева и записывает SHA
+в `release.json`. После публикации сравните поле `commit` в ответе
+`https://PROJECT_ID.web.app/release.json` с SHA релизной ветки и тегом образа API. Конфигурация разворачивает
 закрытые правила клиента и индекс истории цен. Дождитесь готовности индекса,
 затем войдите под пользователем с ролью `analyst` и откройте карточку.
 
