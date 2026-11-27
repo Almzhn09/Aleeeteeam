@@ -16,7 +16,7 @@ analysis.stats  # list[MarketStats] — группы оценки и обзор 
 - Вход: любые `Listing` по контракту v1. Повторы одного ID сворачиваются
   до последнего `scrapedAt`; `listingScrapedAt` в результате указывает именно его.
 - `computed_at` обязателен и должен содержать часовой пояс.
-- `algorithmVersion` = `ALGORITHM_VERSION` (`"v3"`). При смене формулы версия
+- `algorithmVersion` = `ALGORITHM_VERSION` (`"v4"`). При смене формулы версия
   поднимается — API может сравнить версию и вернуть `analysis=null`.
 - Сохранение: `MarketStore.save_analysis(result)` и `publish_stats(stats, computed_at)` из core
   уже принимают эти объекты без изменений контракта.

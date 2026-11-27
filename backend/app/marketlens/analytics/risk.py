@@ -72,7 +72,7 @@ _ACCESSORY = re.compile(
     r"^(?:чехл?\w*|стекл\w*|защитн\w*|пленк\w*|дисплей|матриц\w*|корпус|крышк\w*|"
     r"аккумулятор\w*|батаре\w*|зарядк\w*|зарядн\w*|блок питания|кабель|шнур|наушник\w*|"
     r"коробк\w*|клавиатур\w*|сумк\w*|рюкзак|подставк\w*|держател\w*|шлейф\w*|"
-    r"запчаст\w*)\s+(?:для|на|от|к|под|[a-z])"
+    r"запчаст\w*|игр[аыу]|диск\w*|геймпад\w*|джойстик\w*)\s+(?:для|на|от|к|под|[a-z])"
     r"|\bмуляж\w*"
 )
 ACCESSORY = Signal(
@@ -84,7 +84,11 @@ ACCESSORY = Signal(
 
 
 def is_accessory(listing: Listing) -> bool:
-    return _ACCESSORY.search(normalize_text(listing.title)) is not None
+    text = normalize_text(listing.title)
+    if listing.subcategory == "headphones":
+        # "Наушники AirPods Pro 2" is the device itself in this category.
+        text = re.sub(r"^наушник\w*\s+", "", text)
+    return _ACCESSORY.search(text) is not None
 
 
 # "без предоплаты", "не разбит", "без блокировки" deny the problem. Negated words are

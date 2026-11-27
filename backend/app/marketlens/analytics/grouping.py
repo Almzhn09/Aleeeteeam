@@ -9,6 +9,7 @@ level that still has enough priced peers.
 import re
 from dataclasses import dataclass
 
+from app.marketlens.analytics.devices import DEVICE_KEYS
 from app.marketlens.analytics.laptops import laptop_key
 from app.marketlens.contracts import Listing
 
@@ -33,6 +34,14 @@ _TRANSLITERATION = tuple(
         (r"макбук", "macbook"),
         (r"леново", "lenovo"),
         (r"асус", "asus"),
+        (r"айпад", "ipad"),
+        (r"плей\s?ст[еэ]йшн|плейстешн", "playstation"),
+        (r"\bпс(?=\s?\d)", "ps"),
+        (r"иксбокс", "xbox"),
+        (r"нинтендо", "nintendo"),
+        (r"свитч", "switch"),
+        (r"[аэе]ирпод[сз]", "airpods"),
+        (r"\bтаб\b", "tab"),
         (r"\bпро\b", "pro"),
         (r"\bмакс\b", "max"),
         (r"\bплюс\b", "plus"),
@@ -196,6 +205,11 @@ def group_keys(listing: Listing) -> dict[str, str]:
     elif listing.subcategory in {None, "phones"}:
         key = product_key(listing.title)
         brand, model, variant = key.brand, key.model, key.storage
+    elif listing.subcategory in DEVICE_KEYS:
+        # Screens read the raw title: normalizing would split 23.8" into "23 8".
+        raw = listing.subcategory in {"televisions", "monitors"}
+        text = listing.title.lower() if raw else normalize_text(listing.title)
+        brand, model, variant = DEVICE_KEYS[listing.subcategory](text)
     else:
         return {"category": category_key}
 
