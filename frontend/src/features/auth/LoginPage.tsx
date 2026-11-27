@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from './AuthProvider'
 
-export function LoginPage() {
+export function LoginPage({ marketLens = false }: { marketLens?: boolean }) {
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,8 +19,8 @@ export function LoginPage() {
   }
 
   return <section className="mx-auto max-w-md rounded-xl border border-border bg-background p-8">
-    <p className="text-sm font-medium text-primary">Рабочее пространство аналитика · ВКО</p>
-    <h1 className="mt-2 text-3xl font-semibold">Вход в SAQ QURYLYS</h1>
+    <p className="text-sm font-medium text-primary">{marketLens ? 'Анализ объявлений Казахстана' : 'Рабочее пространство аналитика · ВКО'}</p>
+    <h1 className="mt-2 text-3xl font-semibold">Вход в {marketLens ? 'MarketLens' : 'SAQ QURYLYS'}</h1>
     <p className="mt-3 text-sm text-muted-foreground">Используйте учётную запись, выданную администратором.</p>
     <form onSubmit={submit} className="mt-6 space-y-4">
       <label className="block text-sm font-medium">Электронная почта

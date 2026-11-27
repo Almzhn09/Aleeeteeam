@@ -104,13 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   </AuthContext.Provider>
 }
 
-export function ConfigurationNotice() {
+export function ConfigurationNotice({ marketLens = false }: { marketLens?: boolean }) {
   return <section className="mx-auto max-w-xl rounded-xl border border-border bg-background p-8">
     <h1 className="text-2xl font-semibold">Подключите рабочую среду</h1>
-    <p className="mt-4 text-muted-foreground">Для входа требуется настройка Firebase проекта SAQ QURYLYS.</p>
-    <p className="mt-4 text-sm">Администратор должен заполнить browser-конфигурацию в .env
+    <p className="mt-4 text-muted-foreground">Для входа требуется настройка Firebase проекта {marketLens ? 'MarketLens' : 'SAQ QURYLYS'}.</p>
+    <p className="mt-4 text-sm">Администратор должен заполнить browser-конфигурацию в {marketLens ? '.env.marketlens.local' : '.env'}
       и перезапустить frontend. Не заполнены: {missingFirebaseConfig.join(', ')}.</p>
-    <p className="mt-4 text-sm text-muted-foreground">Инструкция: README → «Firebase и доступ аналитика».
+    <p className="mt-4 text-sm text-muted-foreground">Инструкция: {marketLens ? 'docs/ARCHITECTURE.md' : 'README → «Firebase и доступ аналитика»'}.
       Серверные ключи нельзя размещать в browser-конфигурации.</p>
   </section>
 }

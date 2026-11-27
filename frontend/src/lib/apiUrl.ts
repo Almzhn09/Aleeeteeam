@@ -2,7 +2,10 @@
 // analyses are not limited by Firebase Hosting's dynamic-request timeout.
 export function apiUrl(path: string): string {
   if (!path.startsWith('/api/v1/')) throw new Error('Invalid API path')
-  const configured = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
+  const raw = import.meta.env.MODE === 'marketlens'
+    ? import.meta.env.VITE_MARKETLENS_API_BASE_URL
+    : import.meta.env.VITE_API_BASE_URL
+  const configured = (raw as string | undefined)?.trim()
   if (!configured) return path
   let base: URL
   try { base = new URL(configured) } catch { throw new Error('Некорректный адрес API в настройках сайта.') }

@@ -7,6 +7,10 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { EmptyState, LoadingState } from '@/components/WorkspaceUI'
 import { RouteBoundary } from './RouteBoundary'
 
+const MarketOverview = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketOverview })))
+const MarketCatalog = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketCatalog })))
+const MarketListing = lazy(() => import('@/features/marketlens/MarketPages').then(module => ({ default: module.MarketListing })))
+
 const DronePage = lazy(() => import('@/features/drone/DronePage').then(module => ({ default: module.DronePage })))
 const DroneDetail = lazy(() => import('@/features/drone/DroneDetail').then(module => ({ default: module.DroneDetail })))
 const CompaniesPage = lazy(() => import('@/features/companies/CompaniesPage').then(module => ({ default: module.CompaniesPage })))
@@ -22,7 +26,7 @@ const CreateSignal = lazy(() => import('@/features/signals/SignalsPage').then(mo
 const SignalDetail = lazy(() => import('@/features/signals/SignalsPage').then(module => ({ default: module.SignalDetail })))
 
 
-const modules = [
+const saqModules = [
   { path: '/', title: 'Обзор', icon: LayoutDashboard },
   { path: '/advertising', title: 'Реклама', icon: Megaphone },
   { path: '/complexes', title: 'Реестр ЖК', icon: Building2 },
@@ -31,13 +35,21 @@ const modules = [
   { path: '/signals', title: 'Сигналы', icon: FileCheck2 },
 ]
 
+const marketModules = [
+  { path: '/', title: 'Обзор', icon: LayoutDashboard },
+  { path: '/listings', title: 'Каталог', icon: Megaphone },
+  { path: '/deals', title: 'Выгодные предложения', icon: FileCheck2 },
+  { path: '/risk', title: 'Подозрительные объявления', icon: ShieldCheck },
+]
+
 function focusMainContent() {
   const main = document.getElementById('main-content')
   main?.focus({ preventScroll: true })
   main?.scrollIntoView?.({ block: 'start' })
 }
 
-export function App() {
+export function App({ marketLens = false }: { marketLens?: boolean }) {
+  const modules = marketLens ? marketModules : saqModules
   const { status, profile, error, logout } = useAuth()
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const { pathname } = useLocation()
@@ -49,7 +61,7 @@ export function App() {
     previousPath.current = pathname
   }, [pathname, status])
   if (status !== 'authenticated') return <div className="min-h-screen bg-muted px-4 py-16">
-    {status === 'unavailable' ? <ConfigurationNotice />
+    {status === 'unavailable' ? <ConfigurationNotice marketLens={marketLens} />
       : status === 'loading' ? <p role="status" className="text-center">Проверяем доступ…</p>
       : status === 'denied' ? <section className="mx-auto max-w-lg rounded-xl bg-background p-8">
         <h1 className="text-2xl font-semibold">Доступ не подтверждён</h1>
@@ -58,12 +70,12 @@ export function App() {
           После этого войдите снова.</p>
         <Button onClick={() => { logout().catch(() => setLogoutError('Не удалось выйти. Повторите.')) }}>Выйти</Button>
         {logoutError && <p role="alert">{logoutError}</p>}
-      </section> : <LoginPage />}
+      </section> : <LoginPage marketLens={marketLens} />}
   </div>
   return <div className="workspace-shell">
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); focusMainContent() }}>К содержимому</a>
     <aside className="sidebar">
-      <Link to="/" className="brand"><span className="brand-symbol"><ShieldCheck size={25} /></span><span>SAQ <b>QURYLYS</b><small>Система проверки рисков</small></span></Link>
+      <Link to="/" className="brand"><span className="brand-symbol"><ShieldCheck size={25} /></span><span>{marketLens ? <>Market<b>Lens</b><small>Анализ объявлений</small></> : <>SAQ <b>QURYLYS</b><small>Система проверки рисков</small></>}</span></Link>
       <div className="sidebar-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav aria-label="Основная навигация">
         {modules.map(({ path, title, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'}
@@ -71,17 +83,24 @@ export function App() {
           <Icon size={19} />{title}
         </NavLink>)}
       </nav>
-      <div className="sidebar-note"><ShieldCheck size={22} /><strong>Решение за человеком</strong><p>AI помогает находить гипотезы. Факты подтверждает аналитик.</p></div>
-      <div className="sidebar-region"><MapPin size={15} /> Восточно-Казахстанская область</div>
+      {!marketLens && <div className="sidebar-note"><ShieldCheck size={22} /><strong>Решение за человеком</strong><p>AI помогает находить гипотезы. Факты подтверждает аналитик.</p></div>}
+      <div className="sidebar-region"><MapPin size={15} /> {marketLens ? 'Казахстан' : 'Восточно-Казахстанская область'}</div>
     </aside>
     <div className="workspace-main">
-      <header className={'topbar' + (pathname === '/monitoring' ? ' monitor-topbar' : '')}><div><span className="topbar-context">Рабочее пространство · ВКО</span></div>
+      <header className={'topbar' + (pathname === '/monitoring' ? ' monitor-topbar' : '')}><div><span className="topbar-context">{marketLens ? 'Рынок Казахстана' : 'Рабочее пространство · ВКО'}</span></div>
         <div className="user-menu"><span className="avatar">{(profile?.displayName || profile?.email || 'А').slice(0, 1).toUpperCase()}</span><span><strong>{profile?.displayName || profile?.email || 'Аналитик'}</strong><small>{profile?.role === 'admin' ? 'Администратор' : 'Аналитик'}</small></span>
           <button type="button" className="icon-button" aria-label="Выйти" onClick={() => { logout().catch(() => setLogoutError('Не удалось выйти. Повторите.')) }}><LogOut size={18} /></button></div>
       </header>
       <main id="main-content" className="workspace-content" tabIndex={-1}>
         {logoutError && <p role="alert" className="inline-notice">{logoutError}</p>}
         <RouteBoundary key={pathname}><Suspense fallback={<LoadingState />}><Routes>
+          {marketLens ? <>
+            <Route path="/" element={<MarketOverview />} />
+            <Route path="/listings" element={<MarketCatalog key="all" view="all" />} />
+            <Route path="/deals" element={<MarketCatalog key="deals" view="deals" />} />
+            <Route path="/risk" element={<MarketCatalog key="risk" view="risk" />} />
+            <Route path="/listings/:id" element={<MarketListing key={pathname} />} />
+          </> : <>
           <Route path="/" element={<ComplexList overview />} />
           <Route path="/advertising" element={<AdvertisingPage />} />
           <Route path="/advertising/materials/:id" element={<MaterialReviewPage key={pathname} />} />
@@ -99,6 +118,7 @@ export function App() {
           <Route path="/signals" element={<SignalsPage />} />
           <Route path="/signals/new" element={<CreateSignal />} />
           <Route path="/signals/:id" element={<SignalDetail />} />
+          </>}
           <Route path="*" element={<EmptyState title="Страница не найдена"><Link to="/">Вернуться к обзору</Link></EmptyState>} />
         </Routes></Suspense></RouteBoundary>
       </main>
