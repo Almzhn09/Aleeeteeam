@@ -82,7 +82,7 @@ sampleSize, meanPrice, medianPrice, minPrice, maxPrice и histogram
 city, minPrice, maxPrice, source, view=all|deals|risk, sort=default|newest|price_asc|price_desc, limit, offset.
 Для сортировки по цене сначала идут объявления с известной ценой в KZT, затем остальные.
 По умолчанию deals упорядочен по убыванию dealScore, risk — по убыванию riskScore. Возвращает
-{items, nextOffset, scannedCount, scanLimited, total, subcategoryCounts}; каждый item — {listing, analysis}.
+{items, nextOffset, scannedCount, scanLimited, total, subcategoryCounts, subcategoryPhotos}; каждый item — {listing, analysis}.
 GET /listings/{id} возвращает такой же item.
 GET /listings/{id}/history отдаёт {items, truncated}, каждый снимок содержит
 scrapedAt, price и currency. По умолчанию 20 последних снимков, от новых к старым.
@@ -92,6 +92,7 @@ scrapedAt, price и currency. По умолчанию 20 последних сн
 local, gemini или openai. Каталог читает все реальные записи пакетами Firestore в порядке document ID.
 `offset` применяется после фильтрации и сортировки. subcategoryCounts содержит
 размеры подкатегорий для заданных фильтров, кроме самой подкатегории и подборки.
+subcategoryPhotos содержит по одной HTTPS-фотографии из этих же подкатегорий, если она есть.
 
 GET /radar принимает необязательные city и group. Возвращает
 {groups, sample, scanLimited}. Группы содержат key и sampleSize. Первая группа

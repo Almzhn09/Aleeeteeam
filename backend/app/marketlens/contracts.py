@@ -143,6 +143,7 @@ class ListingPage(MarketModel):
     scan_limited: bool
     total: int = Field(ge=0)
     subcategory_counts: dict[str, int] = Field(default_factory=dict)
+    subcategory_photos: dict[str, HttpUrl] = Field(default_factory=dict)
 
 
 class StatsPage(MarketModel):

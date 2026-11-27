@@ -54,6 +54,7 @@ export interface ListingPage {
   scanLimited: boolean
   total?: number
   subcategoryCounts?: Record<string, number>
+  subcategoryPhotos?: Record<string, string>
 }
 
 export interface MarketStats {

@@ -151,7 +151,11 @@ it('shows live counts, top deals and price distribution on the home page', async
     },
   }
   const api = vi.fn().mockImplementation(async (path: string) => {
-    if (path.includes('view=all')) return { items: [row], nextOffset: 1, scanLimited: false, scannedCount: 30 }
+    if (path.includes('view=all')) return {
+      items: [row], nextOffset: 1, scanLimited: false, scannedCount: 100, total: 30,
+      subcategoryCounts: { phones: 23, laptops: 7 },
+      subcategoryPhotos: { phones: 'https://images.example.test/category.jpg' },
+    }
     if (path.includes('view=deals')) return { items: [deal], nextOffset: null, scanLimited: false, scannedCount: 30 }
     if (path.includes('view=risk')) return { items: [], nextOffset: null, scanLimited: false, scannedCount: 30 }
     if (path.endsWith('/stats')) return {
@@ -172,6 +176,13 @@ it('shows live counts, top deals and price distribution on the home page', async
   const kpis = screen.getByRole('region', { name: 'Ключевые показатели' })
   expect(await within(kpis).findByText('30')).toBeVisible()
   expect(within(kpis).getByText('Медиана (iPhone 13)')).toBeVisible()
+  const categories = await screen.findByRole('region', { name: 'Категории' })
+  const category = within(categories).getByRole('link', { name: /Мобильные телефоны.*23/ })
+  const categoryUrl = new URL(category.getAttribute('href')!, 'https://test.invalid')
+  expect(categoryUrl.searchParams.get('city')).toBe('Усть-Каменогорск')
+  expect(categoryUrl.searchParams.get('subcategory')).toBe('phones')
+  expect(category.querySelector('img')).toHaveAttribute('src', 'https://images.example.test/category.jpg')
+  expect(api.mock.calls.some(([path]) => String(path).includes('subcategory='))).toBe(false)
   expect(await screen.findByRole('link', { name: /iPhone 13 128GB/ })).toHaveAttribute('href', '/listings/olx%3Adeal')
   expect(screen.getByText('-16% от рынка')).toBeVisible()
   expect(screen.getByText('iPhone 13 · 7 объявл.')).toBeVisible()

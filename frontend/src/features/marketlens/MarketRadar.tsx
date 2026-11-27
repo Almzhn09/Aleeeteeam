@@ -74,7 +74,8 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
   const lowest = prices[0]
   const highest = prices[prices.length - 1]
   const [value, setValue] = useState(String(sample.medianPrice ?? lowest))
-  const budget = value === '' ? null : Number(value)
+  const number = Number(value)
+  const budget = value !== '' && Number.isFinite(number) && number >= 0 ? number : null
   const inBudget = budget === null ? 0 : prices.filter(price => price <= budget).length
   const visible = offers.filter(item => budget !== null && item.listing.price !== null
     && item.listing.price <= budget).slice(0, 6)
@@ -83,32 +84,31 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
     : Math.max(0, Math.min(100, (budget - lowest) / (highest - lowest || 1) * 100))
 
   return <div className="my-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-    <section className="panel content-pad min-w-0 space-y-5" aria-label="Распределение цен">
+    <section className="ml-card ml-radar min-w-0 space-y-5" aria-label="Распределение цен">
       <div>
         <h2>Распределение цен</h2>
         <p className="text-sm text-muted-foreground">{prices.length} предложений с ценой в тенге</p>
       </div>
-      <div className="relative">
-        <ol className="flex h-32 items-end gap-1 border-b pb-1" aria-label="Количество объявлений по диапазонам">
+      <div className="ml-radar-chart">
+        <ol className="ml-bars" aria-label="Количество объявлений по диапазонам">
           {histogram.map((bin, index) => {
             const caption = `${formatPrice(bin.min, 'KZT')} – ${formatPrice(bin.max, 'KZT')}: ${bin.count}`
             return <li key={index} title={caption}
-              className="flex h-full min-w-0 flex-1 items-end justify-center">
+              className={budget !== null && bin.min <= budget ? 'fits' : undefined}>
               <span className="sr-only">{caption}</span>
-              <span aria-hidden="true" className={`w-full rounded-t-md ${budget !== null && bin.min <= budget
-                ? 'bg-primary' : 'bg-muted'} motion-safe:transition-colors`}
+              <span aria-hidden="true" className="ml-bar"
                 style={{ height: `${Math.max(3, bin.count / maxCount * 100)}%` }} />
             </li>
           })}
         </ol>
         {marker !== null && <span aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 border-r-2 border-amber-500 motion-safe:transition-[left]"
+          className="ml-budget-marker"
           style={{ left: `${marker}%` }} />}
       </div>
       <p className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
         <span>{formatPrice(lowest, 'KZT')}</span><span>{formatPrice(highest, 'KZT')}</span>
       </p>
-      <label className="grid gap-2 text-sm font-semibold">Бюджет, ₸
+      <label className="ml-budget">Бюджет, ₸
         <input type="number" min="0" step="any" value={value} onChange={event => setValue(event.target.value)}
           className="rounded-lg border bg-background p-2" />
       </label>
@@ -117,7 +117,7 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
         aria-label="Изменить бюджет" onChange={event => setValue(event.target.value)}
         className="w-full accent-primary" />
       <p aria-live="polite">{budget === null ? 'Введите бюджет' : `В бюджете ${inBudget} из ${prices.length}`}</p>
-      <p className="text-sm text-muted-foreground">{sample.medianPrice === null
+      <p className={sample.medianPrice === null ? "ml-note" : "ml-muted"}>{sample.medianPrice === null
         ? 'Пока мало сопоставимых объявлений для рыночного ориентира.'
         : `Медиана цен объявлений: ${formatPrice(sample.medianPrice, 'KZT')}`}</p>
     </section>

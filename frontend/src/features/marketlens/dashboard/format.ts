@@ -11,4 +11,6 @@ export function formatPrice(value: number | null, currency: string | null) {
 export const marketCategories: Record<string, string> = {
   phones: 'Мобильные телефоны',
   laptops: 'Ноутбуки',
+  tablets: 'Планшеты',
+  consoles: 'Игровые приставки',
 }

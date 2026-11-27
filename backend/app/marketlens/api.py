@@ -79,6 +79,7 @@ def catalog(
         scanned_count = 0
         listings = []
         counts: dict[str, int] = {}
+        photos = {}
         selected_subcategory = subcategory.strip().casefold()
         filters = dict(
             q=q.strip().casefold(),
@@ -95,6 +96,12 @@ def catalog(
             category_key = (listing.subcategory or "").casefold()
             if category_key:
                 counts[category_key] = counts.get(category_key, 0) + 1
+                if category_key not in photos:
+                    first_photo = next(
+                        (image for image in listing.images if image.scheme == "https"), None
+                    )
+                    if first_photo is not None:
+                        photos[category_key] = first_photo
             if not selected_subcategory or category_key == selected_subcategory:
                 listings.append(listing)
         if sort == "newest":
@@ -135,6 +142,7 @@ def catalog(
         scan_limited=False,
         total=total,
         subcategory_counts=counts,
+        subcategory_photos=photos,
     )
 
 
