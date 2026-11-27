@@ -58,6 +58,12 @@ def by_id(analysis):
         ("Samsung A54 5G", "samsung-galaxy-a54", None),
         ("Xiaomi Redmi Note 12 Pro 1TB", "xiaomi-redminote12-pro", "1tb"),
         ("Редми ноут 13 про", "xiaomi-redminote13-pro", None),
+        ("Айфон 12 про макс 128", "apple-iphone-12-promax", "128gb"),
+        ("iPhone XR 64, акб 85%", "apple-iphone-xr", "64gb"),
+        ("Samsung Galaxy S24 Ultra 12/512", "samsung-galaxy-s24-ultra", "512gb"),
+        ("Poco X6 Pro 5G 12/512", "xiaomi-pocox6-pro", "512gb"),
+        ("Redmi 13C 8/256", "xiaomi-redmi13c", "256gb"),
+        ("iPhone 14 Pro 2 sim", "apple-iphone-14-pro", None),
         ("Телефон в хорошем состоянии", None, None),
     ],
 )
