@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import { ImageOff } from 'lucide-react'
 import {
   DetailLink, EmptyState, ErrorState, FormField, LoadingState, PageHeading, SourceLink,
 } from '@/components/WorkspaceUI'
@@ -22,13 +23,41 @@ const riskLabels: Record<RiskLevel, string> = {
 const filterNames = ['q', 'category', 'subcategory', 'city', 'source', 'minPrice', 'maxPrice', 'sort'] as const
 const pageSize = 24
 
+function ListingPhotos({ urls, title, detailed }: {
+  urls: string[]
+  title: string
+  detailed: boolean
+}) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const [failed, setFailed] = useState<string[]>([])
+  const photos = [...new Set(urls)].filter(url => url.startsWith('https://') && !failed.includes(url))
+  const active = selected && photos.includes(selected) ? selected : photos[0]
+  return <div className="space-y-2 bg-muted p-2">
+    {active ? <img src={active} alt={`Фото объявления «${title}»`}
+      className="aspect-video w-full rounded-md object-contain" loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(previous => [...previous, active])} />
+      : <div className="grid aspect-video w-full place-content-center justify-items-center gap-2 text-sm text-muted-foreground">
+        <ImageOff size={24} aria-hidden="true" /> Фото недоступно
+      </div>}
+    {detailed && photos.length > 1 && <div className="flex gap-2 overflow-x-auto p-1"
+      role="group" aria-label="Фотографии объявления">
+      {photos.map((url, index) => <button key={url} type="button"
+        className="h-14 w-16 shrink-0 rounded border-2 border-transparent aria-pressed:border-primary"
+        aria-label={`Показать фото ${index + 1}`} aria-pressed={active === url}
+        onClick={() => setSelected(url)}>
+        <img src={url} alt="" className="h-full w-full rounded object-cover"
+          loading="lazy" referrerPolicy="no-referrer" />
+      </button>)}
+    </div>}
+  </div>
+}
+
 function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string }) {
   const detailed = catalog === undefined
   const { listing, analysis } = item
-  const image = listing.images.find(url => url.startsWith('https://'))
   return <article className="panel overflow-hidden ml-listing">
-    {image && <img src={image} alt="" className="aspect-video w-full bg-muted object-contain"
-      loading="lazy" referrerPolicy="no-referrer" />}
+    <ListingPhotos key={listing.id} urls={listing.images} title={listing.title} detailed={detailed} />
     <div className="content-pad space-y-3">
       <p className="ml-chips">{[listing.source.toUpperCase(), listing.city, marketCategories[listing.subcategory ?? ''] ?? listing.category].filter(Boolean).map(part => <span key={part}>{part}</span>)}</p>
       <h2 className="text-lg font-semibold break-words">{listing.title}</h2>
@@ -57,6 +86,12 @@ function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string })
         {!detailed && <DetailLink to={`/listings/${encodeURIComponent(listing.id)}`} state={{ catalog }}>Подробнее</DetailLink>}
         <SourceLink url={listing.url} />
       </div>
+      {detailed && listing.source === 'olx' && <details className="text-sm text-muted-foreground">
+        <summary className="cursor-pointer">Ссылка OLX не открывается?</summary>
+        <p className="mt-2">Скопируйте адрес и откройте его на устройстве, с которого обычно заходите на OLX.</p>
+        <input className="mt-2 w-full rounded border bg-background p-2" aria-label="Прямая ссылка OLX"
+          value={listing.url} readOnly onFocus={event => event.currentTarget.select()} />
+      </details>}
     </div>
   </article>
 }

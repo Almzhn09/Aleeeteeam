@@ -10,7 +10,7 @@ const row: ListingItem = {
     id: 'olx:test', externalId: 'test', source: 'olx', dataset: 'real',
     url: 'https://www.olx.kz/example', title: 'Ноутбук для теста', description: null,
     category: 'electronics', subcategory: null, price: 85000, currency: 'KZT',
-    city: 'Алматы', images: [], attributes: {}, condition: null,
+    city: 'Алматы', images: ['https://photos.example.test/first.jpg', 'https://photos.example.test/second.jpg'], attributes: {}, condition: null,
     publishedAt: null, scrapedAt: '2026-11-27T09:00:00Z', sellerId: null,
   },
   analysis: null,
@@ -58,6 +58,14 @@ describe('MarketLens workspace', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Подробнее' }))
     expect(await screen.findByRole('link', { name: 'Открыть источник ↗' }))
       .toHaveAttribute('href', row.listing.url)
+    const photo = screen.getByRole('img', { name: /Фото объявления/ })
+    expect(photo).toHaveAttribute('src', row.listing.images[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Показать фото 2' }))
+    expect(photo).toHaveAttribute('src', row.listing.images[1])
+    fireEvent.error(photo)
+    expect(photo).toHaveAttribute('src', row.listing.images[0])
+    fireEvent.error(photo)
+    expect(screen.getByText('Фото недоступно')).toBeVisible()
     const history = await screen.findByRole('region', { name: 'История цен' })
     expect(await within(history).findByText(/85\s000 ₸/)).toBeVisible()
     expect(within(history).getByText('Неизвестна')).toBeVisible()

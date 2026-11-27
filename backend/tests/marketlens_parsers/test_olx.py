@@ -2,7 +2,7 @@
 
 import sys
 from datetime import UTC
-from json import loads
+from json import dumps, loads
 
 import httpx
 import pytest
@@ -329,3 +329,35 @@ def test_city_collection_count_excludes_other_places_and_unknown_city(monkeypatc
         f"{CATEGORY_URL}ust-kamenogorsk/?page=2",
     ]
     assert row.city == "Усть-Каменогорск"
+
+
+def test_card_photo_is_used_without_embedded_offer_images():
+    photo = "https://frankfurt.apollo.olxcdn.com/v1/files/synthetic-KZ/image;s=216x152"
+    body = f"""
+    <div data-cy="l-card">
+      <a href="/d/obyavlenie/test-IDTest1.html"><h6>Синтетическое объявление</h6></a>
+      <img src="/app/static/no_thumbnail.svg">
+      <img src="https://unrelated.example/v1/files/synthetic">
+      <img src="{photo}">
+      <img src="{photo}">
+    </div>
+    """
+    with httpx.Client(transport=httpx.MockTransport(lambda _: html(body))) as client:
+        [row] = OLXParser(client, authorized=True).collect(CollectionRequest(category="phones"))
+    assert [str(image) for image in row.images] == [photo]
+
+
+def test_public_card_state_supplies_a_gallery_for_lazy_loaded_images():
+    href = "/d/obyavlenie/test-IDTest1.html"
+    photos = [
+        "https://frankfurt.apollo.olxcdn.com/v1/files/synthetic-first/image",
+        "https://frankfurt.apollo.olxcdn.com/v1/files/synthetic-second/image",
+    ]
+    state = {"listing": {"listing": {"ads": [{"url": href, "photos": photos}]}}}
+    script = (
+        f'<script id="olx-init-config">window.__PRERENDERED_STATE__={dumps(dumps(state))};</script>'
+    )
+    body = synthetic_card(href, "Синтетическое объявление") + script
+    with httpx.Client(transport=httpx.MockTransport(lambda _: html(body))) as client:
+        [row] = OLXParser(client, authorized=True).collect(CollectionRequest(category="phones"))
+    assert [str(photo) for photo in row.images] == photos

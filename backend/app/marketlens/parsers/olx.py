@@ -40,6 +40,7 @@ class _Card:
     title: list[str] = field(default_factory=list)
     price: list[str] = field(default_factory=list)
     location: list[str] = field(default_factory=list)
+    photos: list[str] = field(default_factory=list)
 
 
 class _Cards(HTMLParser):
@@ -49,6 +50,8 @@ class _Cards(HTMLParser):
         self.empty = False
         self.embedded: list[str] = []
         self._structured_data = False
+        self._init_script = False
+        self.card_state = ""
         self._card: _Card | None = None
         self._tags: list[tuple[str, str | None]] = []
 
@@ -56,6 +59,7 @@ class _Cards(HTMLParser):
         attrs = dict(attrs)
         if tag == "script":
             self._structured_data = attrs.get("type") == "application/ld+json"
+            self._init_script = attrs.get("id") == "olx-init-config"
         if attrs.get("data-testid") == "listing-empty-state":
             self.empty = True
         if tag == "div" and attrs.get("data-cy") == "l-card":
@@ -65,6 +69,8 @@ class _Cards(HTMLParser):
             return
         if tag == "a" and (href := attrs.get("href")):
             self._card.hrefs.append(href)
+        if tag == "img" and (photo := attrs.get("src")) and _is_olx_photo(photo):
+            self._card.photos.append(photo)
         if tag in VOID_TAGS:
             return
         capture = self._tags[-1][1] if self._tags else None
@@ -86,6 +92,7 @@ class _Cards(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "script":
             self._structured_data = False
+            self._init_script = False
         for index in range(len(self._tags) - 1, -1, -1):
             if self._tags[index][0] == tag:
                 del self._tags[index:]
@@ -94,6 +101,9 @@ class _Cards(HTMLParser):
                 break
 
     def handle_data(self, data):
+        if self._init_script:
+            self.card_state = data
+            return
         if self._structured_data:
             self.embedded.append(data)
             return
@@ -148,6 +158,32 @@ def _offer_images(documents: list[str]) -> dict[str, list[str]]:
             if urls:
                 result.setdefault(original[0], urls)
     return result
+
+
+def _prerendered_images(script: str) -> dict[str, list[str]]:
+    # OLX sends the photo lists for its lazy-loaded cards in the public category page.
+    assignment = re.search(r"window\.__PRERENDERED_STATE__\s*=\s*", script)
+    if assignment is None:
+        return {}
+    try:
+        encoded, _ = json.JSONDecoder().raw_decode(script[assignment.end() :])
+        state = json.loads(encoded) if isinstance(encoded, str) else encoded
+        ads = state["listing"]["listing"]["ads"]
+    except (ValueError, KeyError, TypeError, RecursionError):
+        return {}
+    if not isinstance(ads, list):
+        return {}
+    images: dict[str, list[str]] = {}
+    for ad in ads:
+        if not isinstance(ad, dict) or not isinstance(ad.get("url"), str):
+            continue
+        original = _original(ad["url"])
+        photos = ad.get("photos")
+        if original is not None and isinstance(photos, list):
+            urls = list(dict.fromkeys(url for url in photos if _is_olx_photo(url)))[:20]
+            if urls:
+                images.setdefault(original[0], urls)
+    return images
 
 
 def _is_olx_photo(value) -> bool:
@@ -209,7 +245,7 @@ def _normalize(
             price=price,
             currency="KZT" if price is not None else None,
             city=_city(card.location),
-            images=images.get(external_id, []),
+            images=images.get(external_id) or list(dict.fromkeys(card.photos))[:20],
             scraped_at=scraped_at,
         )
     except ValidationError:
@@ -278,7 +314,7 @@ class OLXParser:
         cards = _Cards()
         cards.feed(response.text)
         cards.close()
-        images = _offer_images(cards.embedded)
+        images = _offer_images(cards.embedded) | _prerendered_images(cards.card_state)
         rows = [
             listing
             for card in cards.cards
