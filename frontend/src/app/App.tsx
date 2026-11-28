@@ -7,7 +7,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { EmptyState, LoadingState } from '@/components/WorkspaceUI'
 import { RouteBoundary } from './RouteBoundary'
 import { ComparisonProvider, MarketComparison } from '@/features/marketlens/MarketComparison'
-import { MarketLogo, MarketShell } from '@/features/marketlens/MarketShell'
+import { MarketShell } from '@/features/marketlens/MarketShell'
 
 const MarketHome = lazy(() => import('@/features/marketlens/MarketHome').then(module => ({ default: module.MarketHome })))
 const MarketRadar = lazy(() => import('@/features/marketlens/MarketRadar').then(module => ({ default: module.MarketRadar })))
@@ -57,9 +57,8 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
     }
     previousPath.current = pathname
   }, [pathname, status])
-  if (status !== 'authenticated') return <div className={marketLens ? 'ml-shell ml-auth' : 'min-h-screen bg-muted px-4 py-16'}>
-    {marketLens && <MarketLogo />}
-    {status === 'unavailable' ? <ConfigurationNotice marketLens={marketLens} />
+  if (status !== 'authenticated') {
+    const authContent = status === 'unavailable' ? <ConfigurationNotice marketLens={marketLens} />
       : status === 'loading' ? <p role="status" className="text-center">Проверяем доступ…</p>
       : status === 'denied' ? <section className="mx-auto max-w-lg rounded-xl bg-background p-8">
         <h1 className="text-2xl font-semibold">Доступ не подтверждён</h1>
@@ -68,8 +67,17 @@ export function App({ marketLens = false }: { marketLens?: boolean }) {
           После этого войдите снова.</p>
         <Button onClick={() => { logout().catch(() => setLogoutError('Не удалось выйти. Повторите.')) }}>Выйти</Button>
         {logoutError && <p role="alert">{logoutError}</p>}
-      </section> : <LoginPage marketLens={marketLens} />}
-  </div>
+      </section> : <LoginPage marketLens={marketLens} />
+    if (!marketLens) return <div className="min-h-screen bg-muted px-4 py-16">{authContent}</div>
+    return <MarketShell onSkip={focusMainContent}>
+      <div className={status === 'signed_out' ? 'ml-auth ml-auth-login' : 'ml-auth'}>
+        {status === 'signed_out' && <div className="ml-hero-art" aria-hidden="true">
+          <img src={`${import.meta.env.BASE_URL}marketlens/hero-phones.webp`} alt="" />
+        </div>}
+        {authContent}
+      </div>
+    </MarketShell>
+  }
   const logoutNow = () => { logout().catch(() => setLogoutError('Не удалось выйти. Повторите.')) }
   if (marketLens) return <ComparisonProvider><MarketShell userName={profile?.displayName || profile?.email || 'Аналитик'}
     onLogout={logoutNow} onSkip={focusMainContent}>

@@ -33,7 +33,7 @@ function ListingPhotos({ urls, title, detailed }: {
   const [failed, setFailed] = useState<string[]>([])
   const photos = [...new Set(urls)].filter(url => url.startsWith('https://') && !failed.includes(url))
   const active = selected && photos.includes(selected) ? selected : photos[0]
-  return <div className="space-y-2 bg-muted p-2">
+  return <div className="ml-listing-photo space-y-2 bg-muted p-2">
     {active ? <img src={active} alt={`Фото объявления «${title}»`}
       className="aspect-video w-full rounded-md object-contain" loading="lazy"
       referrerPolicy="no-referrer"
@@ -83,7 +83,7 @@ function ListingCard({ item, catalog }: { item: ListingItem; catalog?: string })
         <h3 className="font-semibold">Признаки для проверки</h3>
         <ul className="list-disc pl-5">{analysis.riskReasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{reason.description}</li>)}</ul>
       </div>}
-      <div className="flex flex-wrap gap-4">
+      <div className="ml-listing-actions flex flex-wrap gap-3">
         {!detailed && <DetailLink to={`/listings/${encodeURIComponent(listing.id)}`} state={{ catalog }}>Подробнее</DetailLink>}
         <CompareButton id={listing.id} />
         <SourceLink url={listing.url} />
@@ -152,10 +152,10 @@ export function MarketCatalog({ view }: { view: CatalogView }) {
   return <>
     <PageHeading eyebrow="Рынок Казахстана" title={viewLabels[view]}
       description={view === 'risk' ? 'Признаки риска помогают выбрать, что проверить у продавца.' : 'Запрашиваемые цены и результаты сравнения предложений.'} />
-    <nav aria-label="Подборки каталога" className="mb-4 flex flex-wrap gap-4 text-sm text-primary">
-      {view !== 'all' && <Link to="/listings">Все объявления</Link>}
-      {view !== 'deals' && <Link to="/deals">Выгодные предложения</Link>}
-      {view !== 'risk' && <Link to="/risk">Требуют проверки</Link>}
+    <nav aria-label="Подборки каталога" className="ml-catalog-tabs">
+      <Link to="/listings" aria-current={view === 'all' ? 'page' : undefined}>Все объявления</Link>
+      <Link to="/deals" aria-current={view === 'deals' ? 'page' : undefined}>Выгодные предложения</Link>
+      <Link to="/risk" aria-current={view === 'risk' ? 'page' : undefined}>Требуют проверки</Link>
     </nav>
     <form ref={form} onSubmit={submit} className="panel content-pad mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <FormField label="Поиск"><input name="q" defaultValue={filters.get('q') ?? ''} maxLength={120} type="search" /></FormField>

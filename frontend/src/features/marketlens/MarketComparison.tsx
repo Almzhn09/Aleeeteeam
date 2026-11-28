@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { ImageOff } from 'lucide-react'
 import { EmptyState, ErrorState, LoadingState, PageHeading, SourceLink } from '@/components/WorkspaceUI'
 import { Button } from '@/components/ui/button'
 import type { ListingItem } from '@/lib/marketlens'
@@ -52,6 +53,7 @@ export function MarketComparison() {
 }
 
 function ComparisonCard({ id }: { id: string }) {
+  const [imageFailed, setImageFailed] = useState(false)
   const href = '/listings/' + encodeURIComponent(id)
   const query = useApiQuery<ListingItem>('/api/v1/market' + href)
   const item = query.data
@@ -60,8 +62,10 @@ function ComparisonCard({ id }: { id: string }) {
     {query.loading && <LoadingState />}
     {query.error && <ErrorState message={query.error} retry={query.refresh} />}
     {item && <>
-      {image && <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer"
-        className="aspect-video w-full rounded-xl bg-muted object-contain" />}
+      <div className="ml-compare-photo">
+        {image && !imageFailed ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)} /> : <ImageOff size={26} aria-hidden="true" />}
+      </div>
       <p className="ml-chips"><span>{item.listing.source.toUpperCase()}</span>
         {item.listing.city && <span>{item.listing.city}</span>}</p>
       <h2 className="break-words"><Link to={href}>{item.listing.title}</Link></h2>

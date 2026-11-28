@@ -40,7 +40,7 @@ export function MarketRadar() {
   return <>
     <PageHeading eyebrow="Объявления OLX" title="Радар цен"
       description="Выберите модель и проверьте, какие предложения укладываются в ваш бюджет." />
-    <div className="panel content-pad grid gap-4 sm:grid-cols-2">
+    <div className="panel content-pad ml-radar-controls grid gap-4 sm:grid-cols-2">
       <label className="grid gap-2 text-sm font-semibold">Город
         <select value={city} onChange={event => setParams({ city: event.target.value })}
           className="w-full rounded-lg border bg-background p-2">
@@ -122,7 +122,7 @@ function BudgetAnalysis({ sample }: { sample: RadarSample }) {
         : `Медиана цен объявлений: ${formatPrice(sample.medianPrice, 'KZT')}`}</p>
     </section>
 
-    <section className="ml-card space-y-4" aria-label="Предложения в бюджете">
+    <section className="ml-card ml-radar-offers space-y-4" aria-label="Предложения в бюджете">
       <h2>Предложения в бюджете</h2>
       {!visible.length && <p className="text-sm text-muted-foreground">Нет предложений в пределах бюджета.</p>}
       <ul className="divide-y">

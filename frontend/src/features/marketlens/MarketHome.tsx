@@ -1,7 +1,7 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Activity, ArrowRight, BarChart3, Coins, Layers, Percent, Radar, Search, ShieldAlert, ShieldCheck, Smartphone, Tag,
+  Activity, ArrowRight, BarChart3, Coins, Flame, Layers, Percent, Search, ShieldAlert, ShieldCheck, Smartphone, Tag,
 } from 'lucide-react'
 import { ErrorState, LoadingState } from '@/components/WorkspaceUI'
 import { useApiQuery } from '@/lib/useApiQuery'
@@ -59,23 +59,19 @@ export function MarketHome() {
   return <div className="ml-home">
     <section className="ml-hero">
       <div className="ml-hero-text">
-        <p className="ml-kicker"><BarChart3 size={18} aria-hidden="true" /> Аналитика объявлений Казахстана</p>
-        <h1>Умный поиск <em>выгодных</em> предложений</h1>
-        <p className="ml-lead">Анализируем объявления OLX: сравниваем цену с похожими предложениями,
-          находим выгодные и показываем признаки, которые стоит проверить.</p>
+        <p className="ml-kicker"><span aria-hidden="true"><i /><i /><i /></span> Аналитика объявлений Казахстана</p>
+        <h1>Умный поиск <em>выгодных и безопасных</em> предложений</h1>
+        <p className="ml-lead">Анализируем объявления OLX.<br /> Сравниваем цены, находим выгодные предложения и признаки риска.</p>
         <form className="ml-search" role="search" onSubmit={search}>
           <Search size={20} aria-hidden="true" />
           <input name="q" type="search" maxLength={120} aria-label="Поиск объявлений"
-            placeholder="Найти товар, например: iPhone 13" />
+            placeholder="Найти товар, например: iPhone 15…" />
           <button type="submit">Найти</button>
         </form>
-        <nav className="ml-quick" aria-label="Быстрые переходы">
-          <Link to="/radar"><Radar size={16} aria-hidden="true" /> Радар цен</Link>
-          <Link to="/deals"><Tag size={16} aria-hidden="true" /> Выгодные</Link>
-          <Link to="/risk"><ShieldAlert size={16} aria-hidden="true" /> Требуют проверки</Link>
-        </nav>
       </div>
-      <HeroArt />
+      <div className="ml-hero-art" aria-hidden="true">
+        <img src={`${import.meta.env.BASE_URL}marketlens/hero-phones.webp`} alt="" fetchPriority="high" />
+      </div>
       <ul className="ml-features">
         <li><span><BarChart3 size={20} /></span><div><strong>Реальные цены</strong>и рыночная оценка</div></li>
         <li><span><ShieldCheck size={20} /></span><div><strong>Проверка</strong>признаков риска</div></li>
@@ -83,8 +79,6 @@ export function MarketHome() {
       </ul>
     </section>
 
-    <h2 className="ml-section-title"><Activity size={20} aria-hidden="true" /> Пульс города · {city}</h2>
-    {latest && <p className="ml-muted mb-3">Последний сбор: {marketTime.format(new Date(latest))}</p>}
     <section className="ml-kpis" aria-label="Ключевые показатели">
       <Kpi icon={<Layers size={22} />} tone="green" value={all.data ? marketNumber.format(all.data.total ?? all.data.scannedCount) + (all.data.scanLimited ? '+' : '') : '—'}
         label="Объявлений в городе" note="OLX" />
@@ -98,6 +92,27 @@ export function MarketHome() {
         note={featured ? `${featured.sampleSize} объявл. · весь каталог` : undefined} />
     </section>
 
+    <div className="ml-columns">
+      <PriceChart groups={models.length ? models : groups} loading={stats.loading} error={stats.error}
+        retry={stats.refresh} />
+      <section className="ml-card" aria-labelledby="top-deals">
+        <div className="ml-card-head">
+          <h2 id="top-deals"><Flame size={20} aria-hidden="true" /> Топ выгодных предложений</h2>
+          <Link to="/deals" className="ml-more">Смотреть все <ArrowRight size={15} /></Link>
+        </div>
+        {deals.loading && <LoadingState />}
+        {deals.error && <ErrorState message={deals.error} retry={deals.refresh} />}
+        {deals.data?.items.length === 0 && <p className="ml-muted">Пока нет предложений заметно ниже
+          медианы своей модели. Они появятся, когда в выборке будет больше объявлений.</p>}
+        <ul className="ml-deals">
+          {deals.data?.items.slice(0, 2).map(item => <DealRow key={item.listing.id} item={item} />)}
+        </ul>
+      </section>
+    </div>
+    <div className="ml-city">
+      <h2 className="ml-section-title"><Activity size={18} aria-hidden="true" /> Пульс города · {city}</h2>
+      {latest && <p className="ml-muted">Последний сбор: {marketTime.format(new Date(latest))}</p>}
+    </div>
     {categories.length > 0 && <section className="ml-categories-wrap" aria-labelledby="categories">
       <div className="ml-card-head">
         <h2 id="categories" className="ml-section-title">Категории</h2>
@@ -108,24 +123,6 @@ export function MarketHome() {
           cover={all.data?.subcategoryPhotos?.[slug]} />)}
       </ul>
     </section>}
-
-    <div className="ml-columns">
-      <PriceChart groups={models.length ? models : groups} loading={stats.loading} error={stats.error}
-        retry={stats.refresh} />
-      <section className="ml-card" aria-labelledby="top-deals">
-        <div className="ml-card-head">
-          <h2 id="top-deals">Топ выгодных предложений</h2>
-          <Link to="/deals" className="ml-more">Смотреть все <ArrowRight size={15} /></Link>
-        </div>
-        {deals.loading && <LoadingState />}
-        {deals.error && <ErrorState message={deals.error} retry={deals.refresh} />}
-        {deals.data?.items.length === 0 && <p className="ml-muted">Пока нет предложений заметно ниже
-          медианы своей модели. Они появятся, когда в выборке будет больше объявлений.</p>}
-        <ul className="ml-deals">
-          {deals.data?.items.slice(0, 4).map(item => <DealRow key={item.listing.id} item={item} />)}
-        </ul>
-      </section>
-    </div>
   </div>
 }
 
@@ -156,13 +153,16 @@ function Kpi({ icon, tone, value, label, note }: {
 
 function DealRow({ item }: { item: ListingItem }) {
   const { listing, analysis } = item
+  const [failedImage, setFailedImage] = useState<string>()
   const image = listing.images.find(url => url.startsWith('https://'))
   const deviation = analysis?.priceDeviationPercent
   return <li>
     <Link to={`/listings/${encodeURIComponent(listing.id)}`} state={{ catalog: '/deals' }} className="ml-deal">
-      <span className="ml-thumb">{image
-        ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" />
-        : <Smartphone size={28} aria-hidden="true" />}</span>
+      <span className="ml-thumb">
+        <Smartphone size={26} aria-hidden="true" />
+        {image && image !== failedImage && <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer"
+          onError={() => setFailedImage(image)} />}
+      </span>
       <span className="ml-deal-body">
         <strong>{listing.title}</strong>
         <span className="ml-chips">
@@ -183,16 +183,15 @@ function PriceChart({ groups, loading, error, retry }: {
 }) {
   const [selected, setSelected] = useState(0)
   const group = groups[selected] ?? groups[0]
-  const largest = Math.max(1, ...(group?.histogram.map(bin => bin.count) ?? []))
+
   return <section className="ml-card" aria-labelledby="price-chart">
     <div className="ml-card-head">
       <div>
         <h2 id="price-chart">Распределение цен</h2>
         {group && <p className="ml-muted">{groupTitle(group)} · {group.sampleSize} объявл.</p>}
       </div>
-      <Link to="/radar" className="ml-more">Радар цен <ArrowRight size={15} /></Link>
       {groups.length > 1 && <div className="ml-pills" role="group" aria-label="Группа сравнения">
-        {groups.slice(0, 4).map((item, index) => <button key={item.comparableGroup + item.currency}
+        {groups.slice(0, 3).map((item, index) => <button key={item.comparableGroup + item.currency}
           type="button" aria-pressed={index === selected} onClick={() => setSelected(index)}>
           {groupTitle(item)}
         </button>)}
@@ -201,44 +200,45 @@ function PriceChart({ groups, loading, error, retry }: {
     {loading && <LoadingState />}
     {error && <ErrorState message={error} retry={retry} />}
     {!loading && !error && !group && <p className="ml-muted">Статистика появится после расчёта аналитики.</p>}
-    {group && <>
-      <ol className="ml-bars" aria-label="Количество объявлений по ценовым интервалам">
-        {group.histogram.map((bin, index) => <li key={index}>
-          <span className="ml-bar-count">{bin.count}</span>
-          <span className="ml-bar" style={{ height: `${Math.max(4, bin.count / largest * 100)}%` }} />
-          <span className="ml-bar-label">{compact.format(bin.min)}</span>
-          <span className="ml-visually-hidden">{formatPrice(bin.min, group.currency)} – {formatPrice(bin.max, group.currency)}: {bin.count} объявл.</span>
-        </li>)}
-      </ol>
-      <dl className="ml-metrics">
-        {([['Средняя', group.meanPrice], ['Медиана', group.medianPrice], ['Минимум', group.minPrice], ['Максимум', group.maxPrice]] as const)
-          .map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{formatPrice(value, group.currency)}</dd></div>)}
-      </dl>
-    </>}
+    {group && group.histogram.length > 0 && <DistributionPlot group={group} />}
+    {group && group.histogram.length === 0 && <p className="ml-muted">Пока нет цен для этой группы.</p>}
+    <div className="ml-chart-footer">
+      {group?.medianPrice != null && <span>Медиана <strong>{formatPrice(group.medianPrice, group.currency)}</strong></span>}
+      <Link to="/radar" className="ml-more">Радар цен <ArrowRight size={15} /></Link>
+    </div>
   </section>
 }
 
-function HeroArt() {
-  return <div className="ml-hero-art" aria-hidden="true">
-    <svg viewBox="0 0 320 300" role="presentation">
-      <defs>
-        <linearGradient id="ml-screen" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#e9f6ee" /><stop offset="1" stopColor="#b9e2c8" />
-        </linearGradient>
-      </defs>
-      <circle cx="170" cy="150" r="130" fill="#e3f2e8" />
-      <rect x="95" y="25" width="150" height="260" rx="28" fill="#1f2a24" />
-      <rect x="103" y="33" width="134" height="244" rx="22" fill="url(#ml-screen)" />
-      <rect x="148" y="42" width="44" height="8" rx="4" fill="#1f2a24" />
-      {[60, 95, 75, 130, 110, 150].map((height, index) =>
-        <rect key={index} x={118 + index * 18} y={230 - height} width="11" height={height} rx="4"
-          fill={index === 5 ? '#166534' : '#4ade80'} opacity={index === 5 ? 1 : 0.55} />)}
-      <rect x="40" y="70" width="96" height="40" rx="12" fill="#fff" stroke="#d7e8dd" />
-      <circle cx="60" cy="90" r="9" fill="#dcfce7" /><path d="M55 90l4 4 7-8" stroke="#166534" strokeWidth="2.5" fill="none" />
-      <rect x="76" y="83" width="48" height="6" rx="3" fill="#cfe3d6" /><rect x="76" y="94" width="32" height="6" rx="3" fill="#e5efe8" />
-      <rect x="205" y="190" width="96" height="40" rx="12" fill="#fff" stroke="#d7e8dd" />
-      <circle cx="225" cy="210" r="9" fill="#dcfce7" /><path d="M221 213l8-8M221 205h8v8" stroke="#166534" strokeWidth="2.5" fill="none" />
-      <rect x="241" y="203" width="48" height="6" rx="3" fill="#cfe3d6" /><rect x="241" y="214" width="32" height="6" rx="3" fill="#e5efe8" />
+function DistributionPlot({ group }: { group: MarketStats }) {
+  const fillId = useId()
+  const height = 116
+  const width = 480
+  const step = Math.max(1, Math.ceil(Math.max(...group.histogram.map(bin => bin.count)) / 3))
+  const max = step * 3
+  const points = group.histogram.map((bin, index) => ({
+    x: width * (index + 0.5) / group.histogram.length,
+    y: height * (1 - bin.count / max),
+  }))
+  const line = points.map(({ x, y }) => `${x},${y}`).join(' ')
+  const area = `${points[0].x},${height} ${line} ${points.at(-1)?.x},${height}`
+  return <figure className="ml-plot" aria-label="Количество объявлений по ценовым интервалам">
+    <div className="ml-plot-axis" aria-hidden="true">
+      {[max, 2 * step, step, 0].map(value => <span key={value}>{marketNumber.format(value)}</span>)}
+    </div>
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id={fillId} x2="0" y2="1">
+        <stop stopColor="var(--ml-chart)" stopOpacity=".24" />
+        <stop offset="1" stopColor="var(--ml-chart)" stopOpacity=".04" />
+      </linearGradient></defs>
+      <polygon points={area} fill={`url(#${fillId})`} />
+      <polyline points={line} fill="none" stroke="var(--ml-chart)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      {points.map(({ x, y }) => <circle key={x} cx={x} cy={y} r="3.5" fill="var(--ml-chart)" />)}
     </svg>
-  </div>
+    <ol className="ml-plot-labels">
+      {group.histogram.map(bin => <li key={bin.min}>
+        <span aria-hidden="true">{compact.format(bin.min)}</span>
+        <span className="sr-only">{formatPrice(bin.min, group.currency)} – {formatPrice(bin.max, group.currency)}: {bin.count} объявл.</span>
+      </li>)}
+    </ol>
+  </figure>
 }
