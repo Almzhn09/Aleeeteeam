@@ -83,7 +83,8 @@
 .ml-hero-art::before { content: ''; position: absolute; inset: 30% 0 0 -24%; z-index: -1; border-radius: 100% 48% 0 0;
   background: linear-gradient(145deg, var(--ml-hero-glow), transparent 74%); }
 .ml-hero-art img { position: absolute; bottom: 0; width: auto; max-width: 100%; height: 94%; object-fit: contain; object-position: center bottom;
-  mask-image: radial-gradient(ellipse 65% 85% at 50% 44%, #000 54%, transparent 99%), linear-gradient(#000 82%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent, #000 10% 90%, transparent),
+    radial-gradient(ellipse 65% 85% at 50% 44%, #000 54%, transparent 99%), linear-gradient(#000 82%, transparent 100%);
   mask-composite: intersect; }
 .ml-shell[data-theme="dark"] .ml-hero-art img { filter: brightness(.73); }
 .ml-features { display: grid; gap: 17px; padding-left: 8px; margin-bottom: 26px; }
@@ -223,8 +224,8 @@
 @media (max-width: 720px) {
   .ml-container { width: calc(100% - 28px); }
   .ml-header-row { flex-wrap: wrap; gap: 5px 12px; padding-block: 7px; }
-  .ml-nav { order: 3; width: 100%; padding-block: 2px 4px; }
-  .ml-nav-link { padding: 6px 6px; font-size: 11.5px; }
+  .ml-nav { order: 3; width: 100%; gap: 2px; padding-block: 2px 4px; }
+  .ml-nav-link { padding: 6px 4px; font-size: 11.5px; }
   .ml-main { scroll-margin-top: 95px; }
   .ml-hero { grid-template-columns: minmax(0, 1fr); padding-inline: 0; gap: 0; }
   .ml-hero-text { padding: 20px 0 12px; }
